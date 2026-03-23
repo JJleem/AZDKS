@@ -17,6 +17,7 @@ import { loadRulesStore, getCachedRulesStore, addRule } from './store/rulesStore
 import { loadHistory, addHistoryEntry, type HistoryEntry } from './store/historyStore';
 import { getConfidenceLevel } from './engine/confidenceCalc';
 import { invoke } from '@tauri-apps/api/core';
+import { open as openDialog } from '@tauri-apps/plugin-dialog';
 
 import './App.css';
 
@@ -240,6 +241,18 @@ function App() {
     [isProcessing, autoMove, classifyFiles, getDirFiles, expandPath, setGeckoFor, showStatus, doMove, refreshHistory, removeToast],
   );
 
+  const handleGeckoClick = useCallback(async () => {
+    if (isProcessing) return;
+    const selected = await openDialog({
+      multiple: true,
+      directory: false,
+      title: '정리할 파일을 선택하세요',
+    });
+    if (!selected) return;
+    const paths = Array.isArray(selected) ? selected : [selected];
+    if (paths.length > 0) handleFilesDropped(paths);
+  }, [isProcessing, handleFilesDropped]);
+
   const { dropState } = useDropZone(handleFilesDropped);
 
   useEffect(() => {
@@ -268,7 +281,7 @@ function App() {
   );
 
   const geckoLabel = {
-    idle:     isProcessing ? '분석 중...' : '파일을 드롭하세요',
+    idle:     isProcessing ? '분석 중...' : '클릭하거나 파일을 드롭하세요',
     hover:    '놓아주세요! 🍽️',
     eating:   '냠냠냠...',
     happy:    '정리 완료! ✨',
@@ -327,7 +340,12 @@ function App() {
           {geckoLabel}
         </motion.p>
 
-        <div className="gecko-container">
+        <div
+          className="gecko-container"
+          onClick={handleGeckoClick}
+          style={{ cursor: isProcessing ? 'not-allowed' : 'pointer' }}
+          title="클릭해서 파일 선택"
+        >
           <Gecko state={geckoState} />
         </div>
 
