@@ -7,6 +7,7 @@ import { ToastNotification, type ToastItem } from './components/ToastNotificatio
 import { UnclassifiedPanel } from './components/UnclassifiedPanel';
 import { HistoryList } from './components/HistoryList';
 import { Settings } from './components/Settings';
+import { Onboarding } from './components/Onboarding';
 
 import { useDropZone } from './hooks/useDropZone';
 import { useClassifier, type ProcessedFile } from './hooks/useClassifier';
@@ -19,6 +20,7 @@ import { invoke } from '@tauri-apps/api/core';
 import './App.css';
 
 function App() {
+  const [onboarded, setOnboarded] = useState(() => localStorage.getItem('azdks_onboarded') === '1');
   const [geckoState, setGeckoState] = useState<GeckoState>('idle');
   const [toasts, setToasts] = useState<ToastItem[]>([]);
   const [unclassified, setUnclassified] = useState<ProcessedFile[]>([]);
@@ -184,9 +186,19 @@ function App() {
     confused: '음... 어디로 갈까요? 🤔',
   }[geckoState];
 
+  const handleOnboardingComplete = useCallback(() => {
+    localStorage.setItem('azdks_onboarded', '1');
+    setOnboarded(true);
+    refreshStore();
+  }, [refreshStore]);
+
   return (
     <div className="app-root">
       <div className="app-bg" />
+
+      <AnimatePresence>
+        {!onboarded && <Onboarding onComplete={handleOnboardingComplete} />}
+      </AnimatePresence>
 
       {/* Top bar */}
       <div className="top-bar">
