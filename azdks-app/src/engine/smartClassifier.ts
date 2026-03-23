@@ -372,7 +372,8 @@ export function classifyWithAnalysis(
   const EXT_MAP: Record<string, string> = {
     jpg:'이미지', jpeg:'이미지', png:'이미지', gif:'이미지', webp:'이미지', heic:'이미지', svg:'이미지', bmp:'이미지',
     pdf:'문서', docx:'문서', doc:'문서', pptx:'문서', ppt:'문서', xlsx:'문서', xls:'문서', hwp:'문서', txt:'문서', md:'문서',
-    js:'코드', ts:'코드', jsx:'코드', tsx:'코드', py:'코드', java:'코드', swift:'코드', go:'코드', rs:'코드', cpp:'코드',
+    js:'코드', ts:'코드', jsx:'코드', tsx:'코드', py:'코드', java:'코드', swift:'코드', go:'코드', rs:'코드', cpp:'코드', c:'코드', h:'코드', cs:'코드', rb:'코드', php:'코드', kt:'코드', sh:'코드', sql:'코드',
+    yaml:'개발', yml:'개발', toml:'개발', env:'개발', ini:'개발', cfg:'개발', conf:'개발', json:'개발', xml:'개발',
     mp4:'영상', mov:'영상', avi:'영상', mkv:'영상', webm:'영상',
     mp3:'음악', flac:'음악', wav:'음악', m4a:'음악', aac:'음악',
     zip:'압축', rar:'압축', '7z':'압축', tar:'압축', gz:'압축',

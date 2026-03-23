@@ -321,7 +321,7 @@ function App() {
 
         // 미분류
         if (unknownFiles.length > 0) {
-          setUnclassified((prev) => [...prev, ...unknownFiles]);
+          setUnclassified(unknownFiles);
           setGeckoFor('confused', 3000);
         }
 
