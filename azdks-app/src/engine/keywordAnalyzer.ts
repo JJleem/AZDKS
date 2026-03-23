@@ -55,11 +55,6 @@ const PATTERN_RULES: PatternRule[] = [
   { pattern: /^\d{8}_\d{6}/,                               subFolder: '사진/Android', boost: 0.2,  label: 'Android 사진(날짜패턴)' },
   { pattern: /^raw_\d+/i,                                  subFolder: '사진/RAW', boost: 0.28, label: 'RAW 파일' },
 
-  // ── 버전 관리 / 최종본
-  { pattern: /_v\d+(\.\d+)?$/i,                            subFolder: '문서/버전관리', boost: 0.2,  label: '버전 파일' },
-  { pattern: /_(final|최종|완성|done|finished)(\d*)?$/i,   subFolder: '문서/최종본', boost: 0.25, label: '최종본' },
-  { pattern: /_(draft|초안|임시|wip)(\d*)?$/i,             subFolder: '문서/초안', boost: 0.2,  label: '초안' },
-
   // ── 날짜 패턴 (YYYYMMDD, YYYY-MM-DD, YYYY_MM_DD)
   { pattern: /(?:^|[_\-\s])(\d{4})[_\-](\d{2})[_\-](\d{2})(?:[_\-\s]|$)/, subFolder: '__DATE__', boost: 0.15, label: '날짜 패턴' },
   { pattern: /(?:^|[_\-\s])(\d{4})(\d{2})(\d{2})(?:[_\-\s]|$)/,            subFolder: '__DATE__', boost: 0.12, label: '날짜 패턴(연속)' },
@@ -319,6 +314,15 @@ export function analyzeKeywords(filename: string): KeywordResult | null {
         return { subFolder: rule.subFolder, matched: kw, boost: rule.boost };
       }
     }
+  }
+
+  // 3) 버전/최종본/초안 패턴 — 문서 확장자일 때만 적용 (이미지·영상엔 무시)
+  const DOC_EXTS = new Set(['pdf','doc','docx','ppt','pptx','xls','xlsx','hwp','txt','md','pages','key','numbers','ai','sketch','fig']);
+  const ext = lower.split('.').pop() ?? '';
+  if (DOC_EXTS.has(ext) || !['png','jpg','jpeg','gif','webp','heic','svg','bmp','mp4','mov','avi','mkv','mp3','wav','flac'].includes(ext)) {
+    if (/_v\d+(\.\d+)?$/i.test(stem))                           return { subFolder: '문서/버전관리', matched: '_v', boost: 0.2 };
+    if (/_(final|최종|완성|done|finished)(\d*)?$/i.test(stem))  return { subFolder: '문서/최종본',   matched: '_final', boost: 0.25 };
+    if (/_(draft|초안|임시|wip)(\d*)?$/i.test(stem))            return { subFolder: '문서/초안',     matched: '_draft', boost: 0.2 };
   }
 
   return null;
