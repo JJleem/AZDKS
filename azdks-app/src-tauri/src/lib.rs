@@ -199,14 +199,15 @@ async fn load_rules(app: tauri::AppHandle) -> Result<Value, String> {
             "version": 1,
             "rules": [],
             "defaultFolders": {
-                "홈": "~/Downloads/AZDKS",
-                "이미지": "~/Downloads/AZDKS/이미지",
-                "문서": "~/Downloads/AZDKS/문서",
-                "코드": "~/Downloads/AZDKS/코드",
-                "영상": "~/Downloads/AZDKS/영상",
-                "음악": "~/Downloads/AZDKS/음악",
-                "압축": "~/Downloads/AZDKS/압축",
-                "미분류": "~/Downloads/AZDKS/미분류"
+                "홈":    "~/AZDKS",
+                "이미지": "~/AZDKS/이미지",
+                "문서":   "~/AZDKS/문서",
+                "코드":   "~/AZDKS/코드",
+                "영상":   "~/AZDKS/영상",
+                "음악":   "~/AZDKS/음악",
+                "압축":   "~/AZDKS/압축",
+                "폰트":   "~/AZDKS/폰트",
+                "미분류": "~/AZDKS/미분류"
             }
         }));
     }
