@@ -44,11 +44,11 @@ function folderLabel(folder: string): string {
   return parts[parts.length - 1] ?? folder;
 }
 
-// 신뢰도 → 색상
+// 신뢰도 → 색상 (다크 테마)
 function confidenceColor(c: number): string {
-  if (c >= 0.88) return '#38a169'; // green
-  if (c >= 0.7)  return '#d69e2e'; // yellow
-  return '#e53e3e';                 // red
+  if (c >= 0.88) return '#34d399'; // emerald
+  if (c >= 0.7)  return '#fbbf24'; // amber
+  return '#f87171';                 // red
 }
 
 export function ToastNotification({ toasts }: ToastNotificationProps) {
@@ -79,12 +79,12 @@ export function ToastNotification({ toasts }: ToastNotificationProps) {
               exit={{ opacity: 0, y: 12, scale: 0.95, transition: { duration: 0.18 } }}
               transition={{ type: 'spring', stiffness: 400, damping: 28 }}
               style={{
-                background: 'rgba(255,255,255,0.97)',
+                background: 'rgba(13, 10, 30, 0.92)',
                 borderRadius: 18,
-                boxShadow: '0 8px 40px rgba(0,0,0,0.14)',
+                boxShadow: '0 8px 40px rgba(0,0,0,0.5), 0 0 0 1px rgba(124,58,237,0.2)',
                 padding: '14px 16px 12px',
-                border: '1.5px solid rgba(99,179,237,0.25)',
-                backdropFilter: 'blur(12px)',
+                border: '1px solid rgba(124, 58, 237, 0.25)',
+                backdropFilter: 'blur(20px)',
               }}
             >
               {/* 파일명 + 이모지 */}
@@ -95,7 +95,7 @@ export function ToastNotification({ toasts }: ToastNotificationProps) {
                     style={{
                       fontWeight: 700,
                       fontSize: 13.5,
-                      color: '#1a202c',
+                      color: 'rgba(255,255,255,0.92)',
                       overflow: 'hidden',
                       textOverflow: 'ellipsis',
                       whiteSpace: 'nowrap',
@@ -103,7 +103,7 @@ export function ToastNotification({ toasts }: ToastNotificationProps) {
                   >
                     {toast.fileName}
                   </div>
-                  <div style={{ fontSize: 11.5, color: '#718096', marginTop: 1 }}>
+                  <div style={{ fontSize: 11.5, color: 'rgba(255,255,255,0.35)', marginTop: 1 }}>
                     {hasAlts ? '어디에 넣을까요?' : `${folderLabel(toast.folder)} 폴더로 보낼까요?`}
                   </div>
                 </div>
@@ -141,19 +141,19 @@ export function ToastNotification({ toasts }: ToastNotificationProps) {
                       width: '100%',
                       padding: '8px 12px',
                       borderRadius: 10,
-                      border: '1.5px solid #bee3f8',
-                      background: '#ebf8ff',
+                      border: '1px solid rgba(124,58,237,0.35)',
+                      background: 'rgba(124,58,237,0.15)',
                       cursor: 'pointer',
                       display: 'flex',
                       alignItems: 'center',
                       gap: 8,
                       transition: 'background 0.15s',
                     }}
-                    onMouseEnter={(e) => (e.currentTarget.style.background = '#bee3f8')}
-                    onMouseLeave={(e) => (e.currentTarget.style.background = '#ebf8ff')}
+                    onMouseEnter={(e) => (e.currentTarget.style.background = 'rgba(124,58,237,0.28)')}
+                    onMouseLeave={(e) => (e.currentTarget.style.background = 'rgba(124,58,237,0.15)')}
                   >
                     <span style={{ fontSize: 15 }}>📁</span>
-                    <span style={{ flex: 1, textAlign: 'left', fontSize: 13, fontWeight: 600, color: '#2b6cb0' }}>
+                    <span style={{ flex: 1, textAlign: 'left', fontSize: 13, fontWeight: 600, color: '#c4b5fd' }}>
                       {folderLabel(toast.folder)}
                     </span>
                     <span style={{ fontSize: 11.5, color: confidenceColor(toast.confidence), fontWeight: 700 }}>
@@ -206,8 +206,12 @@ function ChoiceButton({
         width: '100%',
         padding: '9px 12px',
         borderRadius: 11,
-        border: isTop ? '1.5px solid #bee3f8' : '1.5px solid #e2e8f0',
-        background: isTop ? '#ebf8ff' : '#f7fafc',
+        border: isTop
+          ? '1px solid rgba(124,58,237,0.45)'
+          : '1px solid rgba(255,255,255,0.07)',
+        background: isTop
+          ? 'rgba(124,58,237,0.18)'
+          : 'rgba(255,255,255,0.04)',
         cursor: 'pointer',
         display: 'flex',
         alignItems: 'center',
@@ -222,7 +226,7 @@ function ChoiceButton({
           style={{
             fontSize: 13,
             fontWeight: 700,
-            color: isTop ? '#2b6cb0' : '#4a5568',
+            color: isTop ? '#c4b5fd' : 'rgba(255,255,255,0.55)',
             overflow: 'hidden',
             textOverflow: 'ellipsis',
             whiteSpace: 'nowrap',
@@ -233,7 +237,7 @@ function ChoiceButton({
         <div
           style={{
             fontSize: 11,
-            color: '#a0aec0',
+            color: 'rgba(255,255,255,0.28)',
             overflow: 'hidden',
             textOverflow: 'ellipsis',
             whiteSpace: 'nowrap',
@@ -249,7 +253,7 @@ function ChoiceButton({
           fontWeight: 700,
           color: confidenceColor(confidence),
           flexShrink: 0,
-          background: 'rgba(0,0,0,0.04)',
+          background: 'rgba(255,255,255,0.07)',
           padding: '2px 7px',
           borderRadius: 6,
         }}

@@ -11,6 +11,20 @@
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+
+  /* ── 우주 컬러 팔레트 ── */
+  --bg-base:      #06060f;
+  --bg-nebula-1:  #130a2e;
+  --bg-nebula-2:  #080d24;
+  --accent:       #7c3aed;
+  --accent-glow:  #a855f7;
+  --accent-cyan:  #22d3ee;
+  --accent-faint: rgba(124, 58, 237, 0.15);
+  --glass-bg:     rgba(255, 255, 255, 0.035);
+  --glass-border: rgba(255, 255, 255, 0.07);
+  --text-primary: rgba(255, 255, 255, 0.92);
+  --text-muted:   rgba(255, 255, 255, 0.38);
+  --text-dim:     rgba(255, 255, 255, 0.18);
 }
 
 html, body, #root {
@@ -28,14 +42,56 @@ html, body, #root {
   position: relative;
   overflow: hidden;
   user-select: none;
+  color: var(--text-primary);
 }
 
-/* ===== Background ===== */
+/* ===== Background — 우주 ===== */
 .app-bg {
   position: absolute;
   inset: 0;
-  background: linear-gradient(135deg, #fef9f0 0%, #fde8d5 30%, #f0e6ff 70%, #e0f0ff 100%);
   z-index: 0;
+  /* 베이스 딥 스페이스 */
+  background:
+    radial-gradient(ellipse 80% 60% at 15% 40%, rgba(76, 29, 149, 0.35) 0%, transparent 60%),
+    radial-gradient(ellipse 60% 50% at 85% 15%, rgba(14, 30, 80, 0.5)  0%, transparent 55%),
+    radial-gradient(ellipse 70% 60% at 50% 95%, rgba(109, 40, 217, 0.2) 0%, transparent 60%),
+    radial-gradient(ellipse 40% 40% at 70% 60%, rgba(34, 211, 238, 0.06) 0%, transparent 50%),
+    var(--bg-base);
+}
+
+/* 별빛 레이어 */
+.app-bg::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image:
+    radial-gradient(circle, rgba(255,255,255,0.75) 1px, transparent 1px),
+    radial-gradient(circle, rgba(255,255,255,0.45) 1px, transparent 1px);
+  background-size: 120px 120px, 73px 73px;
+  background-position: 0 0, 40px 55px;
+  opacity: 0.55;
+  animation: starsTwinkle 8s ease-in-out infinite alternate;
+}
+
+/* 느린 성운 pulse */
+.app-bg::after {
+  content: '';
+  position: absolute;
+  inset: -20%;
+  background:
+    radial-gradient(ellipse 50% 40% at 30% 60%, rgba(139, 92, 246, 0.12) 0%, transparent 60%),
+    radial-gradient(ellipse 40% 35% at 75% 30%, rgba(34, 211, 238, 0.07) 0%, transparent 60%);
+  animation: nebulaPulse 12s ease-in-out infinite alternate;
+}
+
+@keyframes starsTwinkle {
+  0%   { opacity: 0.45; }
+  100% { opacity: 0.7;  }
+}
+
+@keyframes nebulaPulse {
+  0%   { transform: scale(1)    rotate(0deg);   opacity: 0.7; }
+  100% { transform: scale(1.08) rotate(2deg);   opacity: 1;   }
 }
 
 /* ===== Top Bar ===== */
@@ -45,10 +101,10 @@ html, body, #root {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 14px 20px 10px;
-  background: rgba(255, 255, 255, 0.6);
-  backdrop-filter: blur(12px);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.8);
+  padding: 14px 20px 12px;
+  background: rgba(6, 6, 15, 0.6);
+  backdrop-filter: blur(20px);
+  border-bottom: 1px solid var(--glass-border);
 }
 
 .app-title {
@@ -58,38 +114,45 @@ html, body, #root {
 }
 
 .app-title-main {
-  font-size: 18px;
+  font-size: 17px;
   font-weight: 800;
-  color: #2d3748;
-  letter-spacing: -0.5px;
+  color: var(--text-primary);
+  letter-spacing: -0.4px;
+  /* 미묘한 퍼플 그라디언트 */
+  background: linear-gradient(90deg, #c4b5fd, #e0e7ff);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
 
 .app-title-sub {
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 600;
-  color: #a0aec0;
-  letter-spacing: 2px;
+  color: var(--text-muted);
+  letter-spacing: 2.5px;
 }
 
 .icon-btn {
-  width: 36px;
-  height: 36px;
-  border-radius: 10px;
-  border: 1px solid rgba(0, 0, 0, 0.08);
-  background: rgba(255, 255, 255, 0.8);
+  width: 34px;
+  height: 34px;
+  border-radius: 9px;
+  border: 1px solid var(--glass-border);
+  background: var(--glass-bg);
   cursor: pointer;
-  font-size: 16px;
+  font-size: 15px;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.15s;
-  box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+  transition: all 0.2s;
+  color: var(--text-primary);
+  backdrop-filter: blur(8px);
 }
 
 .icon-btn:hover {
-  background: rgba(255, 255, 255, 1);
+  background: rgba(124, 58, 237, 0.2);
+  border-color: rgba(124, 58, 237, 0.4);
   transform: translateY(-1px);
-  box-shadow: 0 3px 10px rgba(0,0,0,0.1);
+  box-shadow: 0 4px 16px rgba(124, 58, 237, 0.25);
 }
 
 .icon-btn:active {
@@ -105,17 +168,17 @@ html, body, #root {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 16px;
+  gap: 14px;
   padding: 20px;
 }
 
 /* ===== Drop Hint ===== */
 .drop-hint {
-  font-size: 15px;
-  font-weight: 600;
-  color: #718096;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-muted);
   text-align: center;
-  letter-spacing: -0.2px;
+  letter-spacing: 0.01em;
 }
 
 /* ===== Gecko Container ===== */
@@ -138,41 +201,45 @@ html, body, #root {
   align-items: center;
   justify-content: center;
   gap: 12px;
-  background: rgba(66, 153, 225, 0.12);
-  border: 3px dashed rgba(66, 153, 225, 0.5);
+  background: rgba(124, 58, 237, 0.08);
+  border: 2px dashed rgba(168, 85, 247, 0.5);
   border-radius: 24px;
-  color: #4299e1;
+  color: #c4b5fd;
   font-weight: 700;
+  font-size: 15px;
   pointer-events: none;
+  backdrop-filter: blur(4px);
 }
 
 /* ===== Status Message ===== */
 .status-msg {
-  font-size: 13px;
+  font-size: 12.5px;
   font-weight: 600;
-  color: #4a5568;
-  background: rgba(255, 255, 255, 0.9);
-  padding: 8px 16px;
+  color: var(--text-primary);
+  background: rgba(124, 58, 237, 0.2);
+  border: 1px solid rgba(168, 85, 247, 0.3);
+  padding: 7px 16px;
   border-radius: 20px;
-  box-shadow: 0 2px 12px rgba(0,0,0,0.1);
+  box-shadow: 0 0 20px rgba(124, 58, 237, 0.2);
   text-align: center;
+  backdrop-filter: blur(8px);
 }
 
 /* ===== Recent Strip ===== */
 .recent-strip {
   position: relative;
   z-index: 5;
-  background: rgba(255, 255, 255, 0.7);
-  backdrop-filter: blur(8px);
-  border-top: 1px solid rgba(255, 255, 255, 0.9);
-  padding: 10px 16px 12px;
+  background: rgba(6, 6, 15, 0.7);
+  backdrop-filter: blur(16px);
+  border-top: 1px solid var(--glass-border);
+  padding: 10px 18px 12px;
 }
 
 .recent-strip-label {
-  font-size: 10px;
+  font-size: 9.5px;
   font-weight: 700;
-  color: #a0aec0;
-  letter-spacing: 1px;
+  color: var(--text-dim);
+  letter-spacing: 1.5px;
   text-transform: uppercase;
   margin-bottom: 6px;
 }
@@ -181,7 +248,7 @@ html, body, #root {
   display: flex;
   flex-direction: column;
   gap: 4px;
-  max-height: 100px;
+  max-height: 90px;
   overflow-y: auto;
 }
 
@@ -189,11 +256,11 @@ html, body, #root {
   display: flex;
   align-items: center;
   gap: 6px;
-  font-size: 12px;
+  font-size: 11.5px;
 }
 
 .recent-file-name {
-  color: #4a5568;
+  color: rgba(255, 255, 255, 0.6);
   font-weight: 600;
   max-width: 160px;
   overflow: hidden;
@@ -203,13 +270,13 @@ html, body, #root {
 }
 
 .recent-arrow {
-  color: #a0aec0;
+  color: var(--text-dim);
   font-size: 10px;
   flex-shrink: 0;
 }
 
 .recent-folder {
-  color: #4299e1;
+  color: #a78bfa;
   font-size: 11px;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -221,16 +288,16 @@ html, body, #root {
 .backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.2);
+  background: rgba(0, 0, 0, 0.55);
   z-index: 400;
-  backdrop-filter: blur(2px);
+  backdrop-filter: blur(4px);
 }
 
 /* ===== Toast Buttons ===== */
 .toast-btn {
   font-size: 12px;
   font-weight: 600;
-  padding: 6px 14px;
+  padding: 6px 13px;
   border-radius: 8px;
   border: none;
   cursor: pointer;
@@ -239,35 +306,39 @@ html, body, #root {
 }
 
 .toast-btn-primary {
-  background: #4299e1;
+  background: linear-gradient(135deg, #7c3aed, #6d28d9);
   color: #fff;
+  box-shadow: 0 2px 10px rgba(124, 58, 237, 0.4);
 }
 
 .toast-btn-primary:hover {
-  background: #3182ce;
+  background: linear-gradient(135deg, #8b5cf6, #7c3aed);
+  box-shadow: 0 4px 16px rgba(124, 58, 237, 0.5);
 }
 
 .toast-btn-secondary {
-  background: #edf2f7;
-  color: #4a5568;
+  background: rgba(255, 255, 255, 0.07);
+  color: rgba(255, 255, 255, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .toast-btn-secondary:hover {
-  background: #e2e8f0;
+  background: rgba(255, 255, 255, 0.12);
+  color: rgba(255, 255, 255, 0.9);
 }
 
 .toast-btn-ghost {
   background: none;
-  color: #a0aec0;
+  color: rgba(255, 255, 255, 0.28);
 }
 
 .toast-btn-ghost:hover {
-  color: #718096;
+  color: rgba(255, 255, 255, 0.55);
 }
 
 /* ===== Scrollbar ===== */
 ::-webkit-scrollbar {
-  width: 4px;
+  width: 3px;
 }
 
 ::-webkit-scrollbar-track {
@@ -275,6 +346,6 @@ html, body, #root {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(0, 0, 0, 0.15);
+  background: rgba(124, 58, 237, 0.3);
   border-radius: 2px;
 }

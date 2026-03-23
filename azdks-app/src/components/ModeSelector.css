@@ -3,24 +3,25 @@
   flex-direction: column;
   align-items: center;
   gap: 6px;
-  padding: 10px 0 4px;
+  padding: 8px 0 2px;
 }
 
 .mode-selector-label {
-  font-size: 10px;
-  font-weight: 600;
-  color: rgba(255, 255, 255, 0.45);
-  letter-spacing: 0.08em;
+  font-size: 9.5px;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.2);
+  letter-spacing: 0.12em;
   text-transform: uppercase;
 }
 
 .mode-selector-tabs {
   display: flex;
-  gap: 4px;
-  background: rgba(0, 0, 0, 0.2);
-  border-radius: 14px;
-  padding: 4px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  gap: 3px;
+  background: rgba(0, 0, 0, 0.35);
+  border-radius: 13px;
+  padding: 3px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  backdrop-filter: blur(12px);
 }
 
 .mode-tab {
@@ -35,14 +36,14 @@
 }
 
 .mode-tab:hover .mode-tab-inner {
-  background: rgba(255, 255, 255, 0.08);
+  background: rgba(124, 58, 237, 0.12);
 }
 
 .mode-tab-inner {
   display: flex;
   align-items: center;
   gap: 5px;
-  padding: 6px 12px;
+  padding: 6px 11px;
   border-radius: 10px;
   position: relative;
   z-index: 1;
@@ -52,9 +53,10 @@
 .mode-active-indicator {
   position: absolute;
   inset: 0;
-  background: rgba(255, 255, 255, 0.15);
+  background: linear-gradient(135deg, rgba(124, 58, 237, 0.35), rgba(109, 40, 217, 0.2));
   border-radius: 10px;
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  border: 1px solid rgba(168, 85, 247, 0.3);
+  box-shadow: 0 0 12px rgba(124, 58, 237, 0.2);
   z-index: 0;
 }
 
@@ -63,29 +65,30 @@
 }
 
 .mode-tab:not(.active) .mode-emoji {
-  opacity: 0.5;
+  opacity: 0.35;
 }
 
 .mode-emoji {
-  font-size: 15px;
+  font-size: 14px;
   line-height: 1;
 }
 
 .mode-label {
-  font-size: 12px;
-  font-weight: 600;
-  color: rgba(255, 255, 255, 0.85);
+  font-size: 11.5px;
+  font-weight: 700;
+  color: rgba(196, 181, 253, 0.95);
   white-space: nowrap;
+  letter-spacing: 0.01em;
 }
 
 .mode-tab:not(.active) .mode-label {
-  color: rgba(255, 255, 255, 0.4);
+  color: rgba(255, 255, 255, 0.28);
 }
 
 .mode-desc {
-  font-size: 11px;
-  color: rgba(255, 255, 255, 0.35);
+  font-size: 10.5px;
+  color: rgba(255, 255, 255, 0.22);
   text-align: center;
-  min-height: 16px;
+  min-height: 15px;
   letter-spacing: 0.01em;
 }
