@@ -19,6 +19,13 @@ import { loadHistory, addHistoryEntry, removeHistoryEntry, type HistoryEntry } f
 import { getConfidenceLevel } from './engine/confidenceCalc';
 import { invoke } from '@tauri-apps/api/core';
 import { open as openDialog } from '@tauri-apps/plugin-dialog';
+import { ProjectPicker } from './components/ProjectPicker';
+import {
+  loadProjectStore, getCachedProjectStore, addProject,
+  findMatchingProject, extractKeywordsFromFilename,
+  addKeywordsToProject, incrementProjectFileCount,
+  type Project, type ProjectStore,
+} from './store/projectStore';
 
 import './App.css';
 
@@ -29,6 +36,8 @@ function App() {
   const [unclassified, setUnclassified] = useState<ProcessedFile[]>([]);
   const [history, setHistory] = useState<HistoryEntry[]>([]);
   const [store, setStore] = useState(getCachedRulesStore());
+  const [projectStore, setProjectStore] = useState<ProjectStore>(getCachedProjectStore());
+  const [projectPickerFiles, setProjectPickerFiles] = useState<Array<{ path: string; name: string }>>([]);
   const [showHistory, setShowHistory] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [showExplorer, setShowExplorer] = useState(false);
@@ -52,6 +61,8 @@ function App() {
       setStore(s);
       const h = await loadHistory();
       setHistory(h);
+      const ps = await loadProjectStore();
+      setProjectStore(ps);
     };
     init();
   }, []);
@@ -188,13 +199,63 @@ function App() {
           else unknownFiles.push(r);
         }
 
+        // auto 파일: Spotlight 확실 판별(source==='keyword' && confidence>=0.9)은 즉시 이동
+        // 나머지는 프로젝트 매칭 시도
+        const definiteAutoFiles: ProcessedFile[] = [];
+        const projectCandidateFiles: ProcessedFile[] = [];
+
+        for (const f of autoFiles) {
+          if (f.result.source === 'keyword' && f.result.confidence >= 0.9) {
+            definiteAutoFiles.push(f);
+          } else {
+            projectCandidateFiles.push(f);
+          }
+        }
+
+        // 프로젝트 매칭
+        const projectMatchedFiles: Array<{ file: ProcessedFile; project: Project }> = [];
+        const projectUnmatchedFiles: ProcessedFile[] = [];
+
+        for (const f of projectCandidateFiles) {
+          const matched = findMatchingProject(f.name, projectStore.projects);
+          if (matched) {
+            projectMatchedFiles.push({ file: f, project: matched });
+          } else {
+            projectUnmatchedFiles.push(f);
+          }
+        }
+
+        // confirm/unknown 파일들도 프로젝트 매칭 시도
+        const confirmProjectMatched: Array<{ file: ProcessedFile; project: Project }> = [];
+        const confirmNoMatch: ProcessedFile[] = [];
+        for (const f of confirmFiles) {
+          const matched = findMatchingProject(f.name, projectStore.projects);
+          if (matched) {
+            confirmProjectMatched.push({ file: f, project: matched });
+          } else {
+            confirmNoMatch.push(f);
+          }
+        }
+
+        // unknown도 프로젝트 매칭
+        const unknownProjectMatched: Array<{ file: ProcessedFile; project: Project }> = [];
+        const unknownNoMatch: ProcessedFile[] = [];
+        for (const f of unknownFiles) {
+          const matched = findMatchingProject(f.name, projectStore.projects);
+          if (matched) {
+            unknownProjectMatched.push({ file: f, project: matched });
+          } else {
+            unknownNoMatch.push(f);
+          }
+        }
+
         // 자동 이동
         let movedCount = 0;
         const moveErrors: string[] = [];
 
-        if (autoMove && autoFiles.length > 0) {
-          showStatus(`⚡ ${autoFiles.length}개 자동 이동 중...`);
-          for (const f of autoFiles) {
+        if (autoMove && definiteAutoFiles.length > 0) {
+          showStatus(`⚡ ${definiteAutoFiles.length}개 자동 이동 중...`);
+          for (const f of definiteAutoFiles) {
             try {
               await doMove(f.path, f.name, f.result.folder, f.result.confidence);
               movedCount++;
@@ -203,19 +264,52 @@ function App() {
               console.error('Auto move failed:', f.name, e);
             }
           }
-          // 히스토리 한번만 갱신
-          await refreshHistory();
-
-          if (moveErrors.length > 0) {
-            setGeckoFor('confused', 2500);
-            showStatus(`⚠️ ${movedCount}개 완료, ${moveErrors.length}개 실패 (권한 확인 필요)`, 4000);
-          } else if (movedCount > 0) {
-            setGeckoFor('happy', 2000);
-            showStatus(`✅ ${movedCount}개 자동 정리 완료!`);
-          }
         } else if (!autoMove) {
-          for (const f of autoFiles) confirmFiles.unshift(f);
+          for (const f of definiteAutoFiles) confirmNoMatch.unshift(f);
         }
+
+        // 프로젝트 매칭된 파일들 자동 이동
+        const allProjectMatched = [...projectMatchedFiles, ...confirmProjectMatched, ...unknownProjectMatched];
+        for (const { file, project } of allProjectMatched) {
+          try {
+            await doMove(file.path, file.name, project.folder, 1.0);
+            const kws = extractKeywordsFromFilename(file.name);
+            await addKeywordsToProject(project.id, kws);
+            await incrementProjectFileCount(project.id);
+            movedCount++;
+          } catch (e) {
+            moveErrors.push(file.name);
+            console.error('Project move failed:', file.name, e);
+          }
+        }
+
+        // 프로젝트 매칭 안 된 파일들을 projectPickerFiles로 모음
+        const needsProjectPicker = [...projectUnmatchedFiles, ...unknownNoMatch];
+
+        // 히스토리 한번만 갱신
+        if (movedCount > 0 || allProjectMatched.length > 0) {
+          await refreshHistory();
+          const ps = await loadProjectStore();
+          setProjectStore(ps);
+        }
+
+        if (moveErrors.length > 0) {
+          setGeckoFor('confused', 2500);
+          showStatus(`⚠️ ${movedCount}개 완료, ${moveErrors.length}개 실패 (권한 확인 필요)`, 4000);
+        } else if (movedCount > 0) {
+          setGeckoFor('happy', 2000);
+          showStatus(`✅ ${movedCount}개 자동 정리 완료!`);
+        }
+
+        // 프로젝트 선택이 필요한 파일들
+        if (needsProjectPicker.length > 0) {
+          setProjectPickerFiles(needsProjectPicker.map(f => ({ path: f.path, name: f.name })));
+        }
+
+        // confirmNoMatch는 기존 토스트로 처리 (아래 newToasts 생성에서 사용)
+        // confirmFiles를 confirmNoMatch로 교체
+        confirmFiles.length = 0;
+        for (const f of confirmNoMatch) confirmFiles.push(f);
 
         // 확인 토스트 생성
         const newToasts: ToastItem[] = [];
@@ -319,12 +413,6 @@ function App() {
 
         if (newToasts.length > 0) setToasts(newToasts);
 
-        // 미분류
-        if (unknownFiles.length > 0) {
-          setUnclassified(unknownFiles);
-          setGeckoFor('confused', 3000);
-        }
-
       } catch (e) {
         console.error('Drop handling failed:', e);
         showStatus(`❌ 오류가 발생했어요: ${String(e)}`, 4000);
@@ -333,7 +421,7 @@ function App() {
         setIsProcessing(false);
       }
     },
-    [isProcessing, autoMove, classifyFiles, getDirFiles, expandPath, setGeckoFor, showStatus, doMove, refreshHistory, removeToast],
+    [isProcessing, autoMove, classifyFiles, getDirFiles, expandPath, setGeckoFor, showStatus, doMove, refreshHistory, removeToast, projectStore],
   );
 
   const handleGeckoClick = useCallback(async () => {
@@ -432,6 +520,37 @@ function App() {
     },
     [doMove, refreshHistory, refreshStore, setGeckoFor, showStatus],
   );
+
+  const handleAssignToProject = useCallback(async (
+    files: Array<{ path: string; name: string }>,
+    project: Project,
+  ) => {
+    setProjectPickerFiles([]);
+    for (const file of files) {
+      try {
+        await doMove(file.path, file.name, project.folder, 1.0);
+        const kws = extractKeywordsFromFilename(file.name);
+        await addKeywordsToProject(project.id, kws);
+        await incrementProjectFileCount(project.id);
+      } catch {
+        showStatus(`❌ 이동 실패: ${file.name}`, 3000);
+      }
+    }
+    await refreshHistory();
+    const ps = await loadProjectStore();
+    setProjectStore(ps);
+    setGeckoFor('happy', 1500);
+  }, [doMove, refreshHistory, showStatus, setGeckoFor]);
+
+  const handleCreateProject = useCallback(async (
+    files: Array<{ path: string; name: string }>,
+    name: string,
+    folder: string,
+  ) => {
+    const kws = files.flatMap(f => extractKeywordsFromFilename(f.name));
+    const project = await addProject(name, folder, kws);
+    await handleAssignToProject(files, project);
+  }, [handleAssignToProject]);
 
   const geckoLabel = {
     idle:     isProcessing ? '분석 중...' : '클릭하거나 파일을 드롭하세요',
@@ -569,6 +688,25 @@ function App() {
           onSkipAll={() => setUnclassified([])}
         />
       )}
+
+      <AnimatePresence>
+        {projectPickerFiles.length > 0 && (
+          <ProjectPicker
+            files={projectPickerFiles}
+            projects={projectStore.projects}
+            onAssignProject={handleAssignToProject}
+            onCreateProject={handleCreateProject}
+            onSkipToType={(files) => {
+              setProjectPickerFiles([]);
+              setUnclassified(files.map(f => ({
+                path: f.path, name: f.name,
+                result: { folder: '~/AZDKS/미분류', confidence: 0.1, level: 'unknown' as const, reason: '프로젝트 미배정', source: 'unknown' as const },
+              })));
+            }}
+            onDismiss={() => setProjectPickerFiles([])}
+          />
+        )}
+      </AnimatePresence>
 
       <ToastNotification toasts={toasts} />
 
