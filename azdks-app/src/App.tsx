@@ -8,7 +8,6 @@ import { UnclassifiedPanel } from './components/UnclassifiedPanel';
 import { HistoryList } from './components/HistoryList';
 import { Settings } from './components/Settings';
 import { Onboarding } from './components/Onboarding';
-import { ModeSelector } from './components/ModeSelector';
 
 import { useDropZone } from './hooks/useDropZone';
 import { useClassifier, type ProcessedFile } from './hooks/useClassifier';
@@ -16,7 +15,6 @@ import { useClassifier, type ProcessedFile } from './hooks/useClassifier';
 import { loadRulesStore, getCachedRulesStore, addRule } from './store/rulesStore';
 import { loadHistory, addHistoryEntry, type HistoryEntry } from './store/historyStore';
 import { getConfidenceLevel } from './engine/confidenceCalc';
-import { getSavedMode, saveMode, type ClassificationMode } from './engine/classificationMode';
 import { invoke } from '@tauri-apps/api/core';
 
 import './App.css';
@@ -32,7 +30,6 @@ function App() {
   const [showSettings, setShowSettings] = useState(false);
   const [autoMove, setAutoMove] = useState(true);
   const [statusMsg, setStatusMsg] = useState<string | null>(null);
-  const [mode, setMode] = useState<ClassificationMode>(getSavedMode);
   const [isProcessing, setIsProcessing] = useState(false);
 
   const { classifyFiles, getDirFiles, expandPath } = useClassifier();
@@ -73,11 +70,6 @@ function App() {
 
   const removeToast = useCallback((id: string) => {
     setToasts((prev) => prev.filter((t) => t.id !== id));
-  }, []);
-
-  const handleModeChange = useCallback((newMode: ClassificationMode) => {
-    setMode(newMode);
-    saveMode(newMode);
   }, []);
 
   // 폴더 열기 — open -R 로 부모에서 하이라이트해서 보여줌
@@ -127,16 +119,10 @@ function App() {
 
         setGeckoFor('eating', 1500);
 
-        const modeLabels: Record<ClassificationMode, string> = {
-          smart: '스마트 분석',
-          date: '날짜 분석',
-          project: '프로젝트 분석',
-          type: '타입 분류',
-        };
-        showStatus(`📂 ${allFiles.length}개 파일 ${modeLabels[mode]} 중...`);
+        showStatus(`📂 ${allFiles.length}개 파일 스마트 분석 중...`);
 
         // 분류
-        const results = await classifyFiles(allFiles, mode);
+        const results = await classifyFiles(allFiles);
 
         const autoFiles: ProcessedFile[] = [];
         const confirmFiles: ProcessedFile[] = [];
@@ -249,7 +235,7 @@ function App() {
         setIsProcessing(false);
       }
     },
-    [isProcessing, autoMove, classifyFiles, getDirFiles, expandPath, setGeckoFor, showStatus, doMove, refreshHistory, removeToast, mode],
+    [isProcessing, autoMove, classifyFiles, getDirFiles, expandPath, setGeckoFor, showStatus, doMove, refreshHistory, removeToast],
   );
 
   const { dropState } = useDropZone(handleFilesDropped);
@@ -337,8 +323,6 @@ function App() {
         >
           {geckoLabel}
         </motion.p>
-
-        <ModeSelector mode={mode} onChange={handleModeChange} />
 
         <div className="gecko-container">
           <Gecko state={geckoState} />

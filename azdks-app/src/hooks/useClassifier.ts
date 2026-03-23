@@ -1,36 +1,38 @@
 import { useCallback } from 'react';
 import { invoke } from '@tauri-apps/api/core';
-import { classifyFile, classifyFileByDate, ClassificationResult } from '../engine/classifier';
+import { analyzeFile } from '../engine/analyzer';
+import { classifyWithAnalysis } from '../engine/smartClassifier';
 import { getCachedRulesStore } from '../store/rulesStore';
 import { addHistoryEntry } from '../store/historyStore';
-import type { ClassificationMode } from '../engine/classificationMode';
+import type { ClassificationResult } from '../engine/classifier';
 
 export interface ProcessedFile {
   path: string;
   name: string;
   result: ClassificationResult;
+  analysis?: import('../engine/analyzer').FileAnalysis;
 }
 
 export function useClassifier() {
-  const classifyFiles = useCallback(async (
-    paths: string[],
-    mode: ClassificationMode = 'smart',
-  ): Promise<ProcessedFile[]> => {
+  const classifyFiles = useCallback(async (paths: string[]): Promise<ProcessedFile[]> => {
     const store = getCachedRulesStore();
-    const results: ProcessedFile[] = [];
 
-    for (const path of paths) {
-      const name = path.split(/[\\/]/).pop() || path;
-      let result: ClassificationResult;
-
-      if (mode === 'date') {
-        result = await classifyFileByDate(path, store);
-      } else {
-        result = classifyFile(path, store, mode);
-      }
-
-      results.push({ path, name, result });
-    }
+    // 병렬로 분석
+    const results = await Promise.all(
+      paths.map(async (path) => {
+        const name = path.split(/[\\/]/).pop() || path;
+        try {
+          const analysis = await analyzeFile(path);
+          const result = classifyWithAnalysis(analysis, store);
+          return { path, name, result, analysis };
+        } catch {
+          // analyze_file 실패 시 기본 분류로 fallback
+          const { classifyFile } = await import('../engine/classifier');
+          const result = classifyFile(path, store, 'smart');
+          return { path, name, result };
+        }
+      })
+    );
 
     return results;
   }, []);

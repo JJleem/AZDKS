@@ -302,6 +302,126 @@ fn get_app_data_dir(app: &tauri::AppHandle) -> Result<PathBuf, String> {
     Ok(data_dir)
 }
 
+#[derive(Debug, Serialize, Deserialize, Default)]
+pub struct FileAnalysis {
+    pub name: String,
+    pub extension: String,
+    pub size: u64,
+    pub path: String,
+    pub is_dir: bool,
+    pub created_at: Option<String>,
+    pub modified_at: Option<String>,
+    // 이미지
+    pub image_width: Option<u64>,
+    pub image_height: Option<u64>,
+    // 카메라/촬영
+    pub camera_make: Option<String>,
+    pub camera_model: Option<String>,
+    pub has_gps: bool,
+    // 문서
+    pub doc_title: Option<String>,
+    pub doc_author: Option<String>,
+    pub doc_creator: Option<String>,
+    // 스크린샷
+    pub is_screen_capture: bool,
+    pub screen_capture_type: Option<String>,
+    // 콘텐츠 타입
+    pub content_type: Option<String>,
+}
+
+#[tauri::command]
+async fn analyze_file(path: String) -> Result<FileAnalysis, String> {
+    let expanded = expand_tilde(&path);
+    let p = Path::new(&expanded);
+
+    if !p.exists() {
+        return Err(format!("File not found: {}", path));
+    }
+
+    let meta = fs::metadata(p).map_err(|e| e.to_string())?;
+    let name = p.file_name().and_then(|n| n.to_str()).unwrap_or("").to_string();
+    let extension = p.extension().and_then(|e| e.to_str()).unwrap_or("").to_lowercase();
+
+    let mut analysis = FileAnalysis {
+        name,
+        extension,
+        size: meta.len(),
+        path: expanded.clone(),
+        is_dir: meta.is_dir(),
+        created_at: meta.created().ok().and_then(system_time_to_iso),
+        modified_at: meta.modified().ok().and_then(system_time_to_iso),
+        ..Default::default()
+    };
+
+    #[cfg(target_os = "macos")]
+    enrich_with_spotlight(&mut analysis, &expanded);
+
+    Ok(analysis)
+}
+
+#[cfg(target_os = "macos")]
+fn enrich_with_spotlight(analysis: &mut FileAnalysis, path: &str) {
+    let output = std::process::Command::new("mdls")
+        .args(&[
+            "-name", "kMDItemPixelWidth",
+            "-name", "kMDItemPixelHeight",
+            "-name", "kMDItemAcquisitionMake",
+            "-name", "kMDItemAcquisitionModel",
+            "-name", "kMDItemCreator",
+            "-name", "kMDItemAuthors",
+            "-name", "kMDItemTitle",
+            "-name", "kMDItemIsScreenCapture",
+            "-name", "kMDItemScreenCaptureType",
+            "-name", "kMDItemLatitude",
+            "-name", "kMDItemContentType",
+            path,
+        ])
+        .output();
+
+    let output = match output {
+        Ok(o) if o.status.success() => o,
+        _ => return,
+    };
+
+    let text = match std::str::from_utf8(&output.stdout) {
+        Ok(t) => t,
+        Err(_) => return,
+    };
+
+    for line in text.lines() {
+        let parts: Vec<&str> = line.splitn(2, " = ").collect();
+        if parts.len() != 2 { continue; }
+
+        let key = parts[0].trim();
+        let val = parts[1].trim();
+
+        if val == "(null)" { continue; }
+
+        match key {
+            "kMDItemPixelWidth"       => { analysis.image_width  = val.parse().ok(); }
+            "kMDItemPixelHeight"      => { analysis.image_height = val.parse().ok(); }
+            "kMDItemAcquisitionMake"  => { analysis.camera_make  = Some(val.trim_matches('"').to_string()); }
+            "kMDItemAcquisitionModel" => { analysis.camera_model = Some(val.trim_matches('"').to_string()); }
+            "kMDItemCreator"          => { analysis.doc_creator  = Some(val.trim_matches('"').to_string()); }
+            "kMDItemTitle"            => { analysis.doc_title    = Some(val.trim_matches('"').to_string()); }
+            "kMDItemIsScreenCapture"  => { analysis.is_screen_capture = val.trim() == "1"; }
+            "kMDItemScreenCaptureType"=> { analysis.screen_capture_type = Some(val.trim_matches('"').to_string()); }
+            "kMDItemLatitude"         => { analysis.has_gps = true; }
+            "kMDItemContentType"      => { analysis.content_type = Some(val.trim_matches('"').to_string()); }
+            "kMDItemAuthors"          => {
+                // Format: ( "Name" ) or ( "Name1", "Name2" )
+                let inner = val.trim_matches(&['(', ')', ' '] as &[char]);
+                let author = inner.split(',').next()
+                    .unwrap_or("").trim().trim_matches('"');
+                if !author.is_empty() {
+                    analysis.doc_author = Some(author.to_string());
+                }
+            }
+            _ => {}
+        }
+    }
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -316,6 +436,7 @@ pub fn run() {
             load_history,
             open_folder,
             expand_path,
+            analyze_file,
         ])
         .setup(|app| {
             setup_tray(app)?;
