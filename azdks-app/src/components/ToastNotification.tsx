@@ -13,7 +13,8 @@ export interface ToastItem {
   confidence: number;
   reason: string;
   alternatives?: ToastAlternative[];   // 2~3순위 대안
-  onConfirm: () => void;               // 1순위로 이동
+  isDuplicate?: boolean;               // 중복 파일 경고
+  onConfirm: () => void;               // 1순위로 이동 (중복 시 덮어쓰기)
   onPickAlternative: (folder: string) => void;  // 대안 선택
   onChangeFolder: () => void;          // 직접 지정
   onSkip: () => void;
@@ -70,6 +71,7 @@ export function ToastNotification({ toasts }: ToastNotificationProps) {
       <AnimatePresence initial={false}>
         {toasts.map((toast) => {
           const hasAlts = toast.alternatives && toast.alternatives.length > 0;
+          const isDup = toast.isDuplicate === true;
           return (
             <motion.div
               key={toast.id}
@@ -79,16 +81,22 @@ export function ToastNotification({ toasts }: ToastNotificationProps) {
               exit={{ opacity: 0, y: 12, scale: 0.95, transition: { duration: 0.18 } }}
               transition={{ type: 'spring', stiffness: 400, damping: 28 }}
               style={{
-                background: 'rgba(13, 10, 30, 0.92)',
+                background: isDup
+                  ? 'rgba(30, 20, 10, 0.94)'
+                  : 'rgba(13, 10, 30, 0.92)',
                 borderRadius: 18,
-                boxShadow: '0 8px 40px rgba(0,0,0,0.5), 0 0 0 1px rgba(124,58,237,0.2)',
+                boxShadow: isDup
+                  ? '0 8px 40px rgba(0,0,0,0.5), 0 0 0 1px rgba(245,158,11,0.3)'
+                  : '0 8px 40px rgba(0,0,0,0.5), 0 0 0 1px rgba(124,58,237,0.2)',
                 padding: '14px 16px 12px',
-                border: '1px solid rgba(124, 58, 237, 0.25)',
+                border: isDup
+                  ? '1px solid rgba(245, 158, 11, 0.5)'
+                  : '1px solid rgba(124, 58, 237, 0.25)',
                 backdropFilter: 'blur(20px)',
               }}
             >
               {/* 파일명 + 이모지 */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: 9, marginBottom: 10 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 9, marginBottom: isDup ? 6 : 10 }}>
                 <span style={{ fontSize: 22, flexShrink: 0 }}>{fileEmoji(toast.fileName)}</span>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div
@@ -108,6 +116,28 @@ export function ToastNotification({ toasts }: ToastNotificationProps) {
                   </div>
                 </div>
               </div>
+
+              {/* 중복 경고 배너 */}
+              {isDup && (
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 6,
+                    background: 'rgba(245,158,11,0.12)',
+                    border: '1px solid rgba(245,158,11,0.3)',
+                    borderRadius: 8,
+                    padding: '6px 10px',
+                    marginBottom: 10,
+                    fontSize: 12,
+                    color: 'rgba(251,191,36,0.95)',
+                    fontWeight: 600,
+                  }}
+                >
+                  <span>⚠️</span>
+                  <span>같은 이름의 파일이 이미 있어요 — 덮어쓸까요?</span>
+                </div>
+              )}
 
               {/* 선택지 버튼들 */}
               {hasAlts ? (
@@ -141,20 +171,24 @@ export function ToastNotification({ toasts }: ToastNotificationProps) {
                       width: '100%',
                       padding: '8px 12px',
                       borderRadius: 10,
-                      border: '1px solid rgba(124,58,237,0.35)',
-                      background: 'rgba(124,58,237,0.15)',
+                      border: isDup
+                        ? '1px solid rgba(245,158,11,0.45)'
+                        : '1px solid rgba(124,58,237,0.35)',
+                      background: isDup
+                        ? 'rgba(245,158,11,0.15)'
+                        : 'rgba(124,58,237,0.15)',
                       cursor: 'pointer',
                       display: 'flex',
                       alignItems: 'center',
                       gap: 8,
                       transition: 'background 0.15s',
                     }}
-                    onMouseEnter={(e) => (e.currentTarget.style.background = 'rgba(124,58,237,0.28)')}
-                    onMouseLeave={(e) => (e.currentTarget.style.background = 'rgba(124,58,237,0.15)')}
+                    onMouseEnter={(e) => (e.currentTarget.style.background = isDup ? 'rgba(245,158,11,0.28)' : 'rgba(124,58,237,0.28)')}
+                    onMouseLeave={(e) => (e.currentTarget.style.background = isDup ? 'rgba(245,158,11,0.15)' : 'rgba(124,58,237,0.15)')}
                   >
-                    <span style={{ fontSize: 15 }}>📁</span>
-                    <span style={{ flex: 1, textAlign: 'left', fontSize: 13, fontWeight: 600, color: '#c4b5fd' }}>
-                      {folderLabel(toast.folder)}
+                    <span style={{ fontSize: 15 }}>{isDup ? '⚠️' : '📁'}</span>
+                    <span style={{ flex: 1, textAlign: 'left', fontSize: 13, fontWeight: 600, color: isDup ? '#fbbf24' : '#c4b5fd' }}>
+                      {isDup ? `덮어쓰기 — ${folderLabel(toast.folder)}` : folderLabel(toast.folder)}
                     </span>
                     <span style={{ fontSize: 11.5, color: confidenceColor(toast.confidence), fontWeight: 700 }}>
                       {Math.round(toast.confidence * 100)}%

@@ -174,8 +174,14 @@ function App() {
         const autoFiles: ProcessedFile[] = [];
         const confirmFiles: ProcessedFile[] = [];
         const unknownFiles: ProcessedFile[] = [];
+        const duplicateFiles: ProcessedFile[] = [];
 
         for (const r of results) {
+          // 중복 파일은 별도 처리 (자동 이동 대상이더라도)
+          if (r.duplicateExists) {
+            duplicateFiles.push(r);
+            continue;
+          }
           const level = getConfidenceLevel(r.result.confidence);
           if (level === 'auto') autoFiles.push(r);
           else if (level === 'confirm') confirmFiles.push(r);
@@ -266,6 +272,51 @@ function App() {
             onSkip,
           });
         }
+        // 중복 파일 토스트 생성 (경고 스타일)
+        for (const f of duplicateFiles) {
+          const id = uuidv4();
+          const expanded = await expandPath(f.result.folder);
+
+          const onConfirm = async () => {
+            removeToast(id);
+            try {
+              await doMove(f.path, f.name, f.result.folder, f.result.confidence);
+              await refreshHistory();
+              setGeckoFor('happy', 1500);
+            } catch (e) {
+              showStatus(`❌ 이동 실패: ${f.name} — 파일이 이미 없거나 권한 오류`, 4000);
+            }
+          };
+
+          const onSkip = () => removeToast(id);
+          const onChangeFolder = () => {
+            removeToast(id);
+            setUnclassified((prev) => [...prev, f]);
+          };
+
+          newToasts.push({
+            id,
+            fileName: f.name,
+            folder: expanded,
+            confidence: f.result.confidence,
+            reason: f.result.reason,
+            isDuplicate: true,
+            onConfirm,
+            onPickAlternative: async (folder: string) => {
+              removeToast(id);
+              try {
+                await doMove(f.path, f.name, folder, f.result.confidence);
+                await refreshHistory();
+                setGeckoFor('happy', 1500);
+              } catch (e) {
+                showStatus(`❌ 이동 실패: ${f.name}`, 4000);
+              }
+            },
+            onChangeFolder,
+            onSkip,
+          });
+        }
+
         if (newToasts.length > 0) setToasts((prev) => [...prev, ...newToasts]);
 
         // 미분류

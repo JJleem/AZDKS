@@ -11,6 +11,7 @@ export interface ProcessedFile {
   name: string;
   result: ClassificationResult;
   analysis?: import('../engine/analyzer').FileAnalysis;
+  duplicateExists?: boolean;
 }
 
 export function useClassifier() {
@@ -21,16 +22,29 @@ export function useClassifier() {
     const results = await Promise.all(
       paths.map(async (path) => {
         const name = path.split(/[\\/]/).pop() || path;
+        let processed: ProcessedFile;
         try {
           const analysis = await analyzeFile(path);
           const result = classifyWithAnalysis(analysis, store);
-          return { path, name, result, analysis };
+          processed = { path, name, result, analysis };
         } catch {
           // analyze_file 실패 시 기본 분류로 fallback
           const { classifyFile } = await import('../engine/classifier');
           const result = classifyFile(path, store, 'smart');
-          return { path, name, result };
+          processed = { path, name, result };
         }
+
+        // 중복 파일 감지: 목적 폴더에 같은 이름의 파일이 있는지 확인
+        try {
+          const destPath = `${processed.result.folder}/${name}`;
+          const duplicateExists = await invoke<boolean>('check_file_exists', { path: destPath });
+          processed = { ...processed, duplicateExists };
+        } catch {
+          // 확인 실패 시 중복 없음으로 처리
+          processed = { ...processed, duplicateExists: false };
+        }
+
+        return processed;
       })
     );
 

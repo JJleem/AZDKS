@@ -284,6 +284,12 @@ async fn expand_path(path: String) -> Result<String, String> {
     Ok(expand_tilde(&path))
 }
 
+#[tauri::command]
+fn check_file_exists(path: String) -> bool {
+    let p = expand_tilde(&path);
+    std::path::Path::new(&p).exists()
+}
+
 fn expand_tilde(path: &str) -> String {
     if path.starts_with("~/") {
         if let Some(home) = dirs_next::home_dir() {
@@ -686,6 +692,7 @@ pub fn run() {
             analyze_file,
             read_tree,
             search_files,
+            check_file_exists,
         ])
         .setup(|app| {
             setup_tray(app)?;
