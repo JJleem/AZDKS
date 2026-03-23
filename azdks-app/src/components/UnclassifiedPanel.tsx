@@ -1,5 +1,6 @@
 import { motion, AnimatePresence } from 'framer-motion';
 import { useState } from 'react';
+import { open as openFolderDialog } from '@tauri-apps/plugin-dialog';
 import type { ProcessedFile } from '../hooks/useClassifier';
 
 interface UnclassifiedPanelProps {
@@ -83,31 +84,44 @@ export function UnclassifiedPanel({ files, onAssign, onSkipAll }: UnclassifiedPa
               </div>
 
               <div style={{ display: 'flex', gap: 7, alignItems: 'center' }}>
-                <input
-                  type="text"
-                  placeholder="~/AZDKS/폴더명"
-                  value={folderInputs[file.path] ?? ''}
-                  onChange={(e) => setFolderInputs((prev) => ({ ...prev, [file.path]: e.target.value }))}
-                  style={{
-                    flex: 1, fontSize: 12, padding: '6px 10px', borderRadius: 8,
-                    border: '1px solid rgba(255,255,255,0.12)',
-                    background: 'rgba(255,255,255,0.07)',
-                    color: 'rgba(255,255,255,0.85)',
-                    outline: 'none', fontFamily: 'inherit',
+                <button
+                  onClick={async () => {
+                    const selected = await openFolderDialog({
+                      directory: true,
+                      multiple: false,
+                      title: `"${file.name}" 을 넣을 폴더를 선택하세요`,
+                    });
+                    if (selected && typeof selected === 'string') {
+                      setFolderInputs((prev) => ({ ...prev, [file.path]: selected }));
+                    }
                   }}
-                  onFocus={e => e.currentTarget.style.borderColor = 'rgba(124,58,237,0.5)'}
-                  onBlur={e => e.currentTarget.style.borderColor = 'rgba(255,255,255,0.12)'}
-                />
+                  style={{
+                    flex: 1, fontSize: 12, padding: '7px 10px', borderRadius: 8,
+                    border: '1px solid rgba(255,255,255,0.12)',
+                    background: 'rgba(255,255,255,0.06)',
+                    color: folderInputs[file.path] ? 'rgba(255,255,255,0.8)' : 'rgba(255,255,255,0.3)',
+                    cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left',
+                    overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                  }}
+                >
+                  {folderInputs[file.path]
+                    ? '📁 ' + folderInputs[file.path].split('/').slice(-2).join('/')
+                    : '📂 폴더 선택 (Finder)'}
+                </button>
                 <button
                   onClick={() => {
                     const folder = folderInputs[file.path];
                     if (folder?.trim()) onAssign(file, folder.trim(), saveRules[file.path] ?? false);
                   }}
+                  disabled={!folderInputs[file.path]}
                   style={{
-                    fontSize: 12, padding: '6px 12px', borderRadius: 8,
-                    background: 'rgba(124,58,237,0.25)', border: '1px solid rgba(124,58,237,0.4)',
-                    color: '#c4b5fd', cursor: 'pointer', fontWeight: 600,
-                    whiteSpace: 'nowrap', fontFamily: 'inherit',
+                    fontSize: 12, padding: '7px 14px', borderRadius: 8,
+                    background: folderInputs[file.path] ? 'rgba(124,58,237,0.3)' : 'rgba(255,255,255,0.05)',
+                    border: folderInputs[file.path] ? '1px solid rgba(124,58,237,0.5)' : '1px solid rgba(255,255,255,0.08)',
+                    color: folderInputs[file.path] ? '#c4b5fd' : 'rgba(255,255,255,0.2)',
+                    cursor: folderInputs[file.path] ? 'pointer' : 'not-allowed',
+                    fontWeight: 600, whiteSpace: 'nowrap', fontFamily: 'inherit',
+                    transition: 'all 0.15s',
                   }}
                 >
                   이동
