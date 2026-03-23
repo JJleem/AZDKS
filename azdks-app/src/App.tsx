@@ -8,6 +8,7 @@ import { UnclassifiedPanel } from './components/UnclassifiedPanel';
 import { HistoryList } from './components/HistoryList';
 import { Settings } from './components/Settings';
 import { Onboarding } from './components/Onboarding';
+import { FileExplorer } from './components/FileExplorer';
 
 import { useDropZone } from './hooks/useDropZone';
 import { useClassifier, type ProcessedFile } from './hooks/useClassifier';
@@ -28,6 +29,7 @@ function App() {
   const [store, setStore] = useState(getCachedRulesStore());
   const [showHistory, setShowHistory] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+  const [showExplorer, setShowExplorer] = useState(false);
   const [autoMove, setAutoMove] = useState(true);
   const [statusMsg, setStatusMsg] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -310,8 +312,9 @@ function App() {
               />
             )}
           </AnimatePresence>
-          <button className="icon-btn" onClick={() => { setShowHistory(true); setShowSettings(false); }} title="정리 내역">📋</button>
-          <button className="icon-btn" onClick={() => { setShowSettings(true); setShowHistory(false); }} title="설정">⚙️</button>
+          <button className="icon-btn" onClick={() => { setShowHistory(true); setShowSettings(false); setShowExplorer(false); }} title="정리 내역">📋</button>
+          <button className="icon-btn" onClick={() => { setShowSettings(true); setShowHistory(false); setShowExplorer(false); }} title="설정">⚙️</button>
+          <button className="icon-btn" onClick={() => { setShowExplorer(v => !v); setShowHistory(false); setShowSettings(false); }} title="파일 탐색기">📁</button>
         </div>
       </div>
 
@@ -417,13 +420,22 @@ function App() {
           />
         )}
       </AnimatePresence>
+      <AnimatePresence>
+        {showExplorer && (
+          <FileExplorer
+            rootPath={store.defaultFolders['홈'] ?? '~/AZDKS'}
+            onClose={() => setShowExplorer(false)}
+            onOpenFile={openFolder}
+          />
+        )}
+      </AnimatePresence>
 
       <AnimatePresence>
-        {(showHistory || showSettings) && (
+        {(showHistory || showSettings || showExplorer) && (
           <motion.div
             className="backdrop"
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            onClick={() => { setShowHistory(false); setShowSettings(false); }}
+            onClick={() => { setShowHistory(false); setShowSettings(false); setShowExplorer(false); }}
           />
         )}
       </AnimatePresence>

@@ -422,6 +422,121 @@ fn enrich_with_spotlight(analysis: &mut FileAnalysis, path: &str) {
     }
 }
 
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct TreeNode {
+    pub name: String,
+    pub path: String,
+    pub is_dir: bool,
+    pub ext: String,
+    pub size: u64,
+    pub children: Vec<TreeNode>,
+}
+
+#[tauri::command]
+async fn read_tree(path: String, depth: u32) -> Result<TreeNode, String> {
+    let expanded = expand_tilde(&path);
+    let p = Path::new(&expanded);
+
+    if !p.exists() {
+        return Ok(TreeNode {
+            name: p.file_name().and_then(|n| n.to_str()).unwrap_or("AZDKS").to_string(),
+            path: expanded,
+            is_dir: true,
+            ext: String::new(),
+            size: 0,
+            children: vec![],
+        });
+    }
+
+    build_tree(p, depth)
+}
+
+fn build_tree(p: &Path, depth: u32) -> Result<TreeNode, String> {
+    let name = p.file_name().and_then(|n| n.to_str()).unwrap_or("").to_string();
+    let path_str = p.to_str().unwrap_or("").to_string();
+    let meta = fs::metadata(p).map_err(|e| e.to_string())?;
+    let is_dir = meta.is_dir();
+    let ext = p.extension().and_then(|e| e.to_str()).unwrap_or("").to_lowercase();
+
+    let mut children = vec![];
+    if is_dir && depth > 0 {
+        if let Ok(entries) = fs::read_dir(p) {
+            let mut dirs: Vec<_> = vec![];
+            let mut files: Vec<_> = vec![];
+            for entry in entries.flatten() {
+                let ep = entry.path();
+                if ep.file_name().and_then(|n| n.to_str()).map(|s| s.starts_with('.')).unwrap_or(false) {
+                    continue;
+                }
+                if ep.is_dir() { dirs.push(ep); } else { files.push(ep); }
+            }
+            dirs.sort();
+            files.sort();
+            for d in dirs {
+                if let Ok(node) = build_tree(&d, depth - 1) {
+                    children.push(node);
+                }
+            }
+            for f in files {
+                if let Ok(node) = build_tree(&f, 0) {
+                    children.push(node);
+                }
+            }
+        }
+    }
+
+    Ok(TreeNode {
+        name,
+        path: path_str,
+        is_dir,
+        ext,
+        size: if is_dir { 0 } else { meta.len() },
+        children,
+    })
+}
+
+#[tauri::command]
+async fn search_files(root: String, query: String) -> Result<Vec<TreeNode>, String> {
+    let expanded = expand_tilde(&root);
+    let p = Path::new(&expanded);
+    if !p.exists() {
+        return Ok(vec![]);
+    }
+    let query_lower = query.to_lowercase();
+    let mut results = vec![];
+    search_recursive(p, &query_lower, &mut results);
+    results.sort_by(|a, b| a.name.cmp(&b.name));
+    Ok(results)
+}
+
+fn search_recursive(dir: &Path, query: &str, results: &mut Vec<TreeNode>) {
+    let entries = match fs::read_dir(dir) {
+        Ok(e) => e,
+        Err(_) => return,
+    };
+    for entry in entries.flatten() {
+        let ep = entry.path();
+        let name = ep.file_name().and_then(|n| n.to_str()).unwrap_or("").to_string();
+        if name.starts_with('.') { continue; }
+        if ep.is_dir() {
+            search_recursive(&ep, query, results);
+        } else {
+            if name.to_lowercase().contains(query) {
+                let meta = fs::metadata(&ep).ok();
+                let ext = ep.extension().and_then(|e| e.to_str()).unwrap_or("").to_lowercase();
+                results.push(TreeNode {
+                    name: name.clone(),
+                    path: ep.to_str().unwrap_or("").to_string(),
+                    is_dir: false,
+                    ext,
+                    size: meta.map(|m| m.len()).unwrap_or(0),
+                    children: vec![],
+                });
+            }
+        }
+    }
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -437,6 +552,8 @@ pub fn run() {
             open_folder,
             expand_path,
             analyze_file,
+            read_tree,
+            search_files,
         ])
         .setup(|app| {
             setup_tray(app)?;
