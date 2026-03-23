@@ -284,6 +284,29 @@ html, body, #root {
   flex: 1;
 }
 
+/* 클릭 가능한 폴더 버튼 */
+.recent-folder-btn {
+  background: none;
+  border: none;
+  color: #a78bfa;
+  font-size: 11px;
+  font-family: inherit;
+  cursor: pointer;
+  padding: 1px 6px;
+  border-radius: 5px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+  text-align: left;
+  transition: background 0.15s, color 0.15s;
+}
+
+.recent-folder-btn:hover {
+  background: rgba(167, 139, 250, 0.15);
+  color: #c4b5fd;
+}
+
 /* ===== Backdrop ===== */
 .backdrop {
   position: fixed;
