@@ -1,0 +1,91 @@
+.mode-selector {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 0 4px;
+}
+
+.mode-selector-label {
+  font-size: 10px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.45);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.mode-selector-tabs {
+  display: flex;
+  gap: 4px;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 14px;
+  padding: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.mode-tab {
+  position: relative;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  border-radius: 10px;
+  overflow: hidden;
+  transition: background 0.2s;
+}
+
+.mode-tab:hover .mode-tab-inner {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.mode-tab-inner {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 12px;
+  border-radius: 10px;
+  position: relative;
+  z-index: 1;
+  transition: background 0.15s;
+}
+
+.mode-active-indicator {
+  position: absolute;
+  inset: 0;
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  z-index: 0;
+}
+
+.mode-tab.active .mode-emoji {
+  filter: none;
+}
+
+.mode-tab:not(.active) .mode-emoji {
+  opacity: 0.5;
+}
+
+.mode-emoji {
+  font-size: 15px;
+  line-height: 1;
+}
+
+.mode-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.85);
+  white-space: nowrap;
+}
+
+.mode-tab:not(.active) .mode-label {
+  color: rgba(255, 255, 255, 0.4);
+}
+
+.mode-desc {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.35);
+  text-align: center;
+  min-height: 16px;
+  letter-spacing: 0.01em;
+}

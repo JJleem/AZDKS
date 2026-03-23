@@ -23,13 +23,14 @@ const DEFAULT_RULES_STORE: RulesStore = {
   version: 1,
   rules: [],
   defaultFolders: {
-    '이미지': '~/Pictures/AZDKS/이미지',
-    '문서': '~/Documents/AZDKS/문서',
-    '코드': '~/Documents/AZDKS/코드',
-    '영상': '~/Movies/AZDKS/영상',
-    '음악': '~/Music/AZDKS/음악',
+    '홈': '~/Downloads/AZDKS',          // 의도 기반 분류의 루트
+    '이미지': '~/Downloads/AZDKS/이미지', // 키워드 없는 순수 이미지
+    '문서': '~/Downloads/AZDKS/문서',
+    '코드': '~/Downloads/AZDKS/코드',
+    '영상': '~/Downloads/AZDKS/영상',
+    '음악': '~/Downloads/AZDKS/음악',
     '압축': '~/Downloads/AZDKS/압축',
-    '폰트': '~/Library/Fonts/AZDKS',
+    '폰트': '~/Downloads/AZDKS/폰트',
     '미분류': '~/Downloads/AZDKS/미분류',
   },
 };

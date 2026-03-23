@@ -8,6 +8,7 @@ import { UnclassifiedPanel } from './components/UnclassifiedPanel';
 import { HistoryList } from './components/HistoryList';
 import { Settings } from './components/Settings';
 import { Onboarding } from './components/Onboarding';
+import { ModeSelector } from './components/ModeSelector';
 
 import { useDropZone } from './hooks/useDropZone';
 import { useClassifier, type ProcessedFile } from './hooks/useClassifier';
@@ -15,6 +16,7 @@ import { useClassifier, type ProcessedFile } from './hooks/useClassifier';
 import { loadRulesStore, getCachedRulesStore, addRule } from './store/rulesStore';
 import { loadHistory, addHistoryEntry, type HistoryEntry } from './store/historyStore';
 import { getConfidenceLevel } from './engine/confidenceCalc';
+import { getSavedMode, saveMode, type ClassificationMode } from './engine/classificationMode';
 import { invoke } from '@tauri-apps/api/core';
 
 import './App.css';
@@ -30,6 +32,7 @@ function App() {
   const [showSettings, setShowSettings] = useState(false);
   const [autoMove, setAutoMove] = useState(true);
   const [statusMsg, setStatusMsg] = useState<string | null>(null);
+  const [mode, setMode] = useState<ClassificationMode>(getSavedMode);
 
   const { classifyFiles, getDirFiles, expandPath } = useClassifier();
   const geckoTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -69,6 +72,11 @@ function App() {
     setToasts((prev) => prev.filter((t) => t.id !== id));
   }, []);
 
+  const handleModeChange = useCallback((newMode: ClassificationMode) => {
+    setMode(newMode);
+    saveMode(newMode);
+  }, []);
+
   const doMove = useCallback(
     async (srcPath: string, fileName: string, folder: string, confidence: number) => {
       const expanded = await expandPath(folder);
@@ -89,9 +97,16 @@ function App() {
       }
 
       setGeckoFor('eating', 1500);
-      showStatus(`${allFiles.length}개 파일 분석 중...`);
 
-      const results = await classifyFiles(allFiles);
+      const modeLabels: Record<ClassificationMode, string> = {
+        smart: '스마트 분석',
+        date: '날짜 분석',
+        project: '프로젝트 분석',
+        type: '타입 분류',
+      };
+      showStatus(`${allFiles.length}개 파일 ${modeLabels[mode]} 중...`);
+
+      const results = await classifyFiles(allFiles, mode);
 
       const autoFiles: ProcessedFile[] = [];
       const confirmFiles: ProcessedFile[] = [];
@@ -104,7 +119,6 @@ function App() {
         else unknownFiles.push(r);
       }
 
-      // Auto move high-confidence files
       if (autoMove && autoFiles.length > 0) {
         for (const f of autoFiles) {
           try {
@@ -119,11 +133,19 @@ function App() {
         for (const f of autoFiles) confirmFiles.unshift(f);
       }
 
-      // Build toasts for confirm-level files
       const newToasts: ToastItem[] = [];
       for (const f of confirmFiles) {
         const id = uuidv4();
         const expanded = await expandPath(f.result.folder);
+
+        // 대안 폴더 경로 expand
+        const expandedAlts = await Promise.all(
+          (f.result.alternatives ?? []).map(async (alt) => ({
+            folder: await expandPath(alt.folder),
+            confidence: alt.confidence,
+            reason: alt.reason,
+          }))
+        );
 
         const onConfirm = async () => {
           removeToast(id);
@@ -134,23 +156,44 @@ function App() {
             console.error('Move failed:', e);
           }
         };
+
+        const onPickAlternative = async (folder: string) => {
+          removeToast(id);
+          try {
+            await doMove(f.path, f.name, folder, f.result.confidence);
+            setGeckoFor('happy', 1500);
+          } catch (e) {
+            console.error('Alternative move failed:', e);
+          }
+        };
+
         const onSkip = () => removeToast(id);
         const onChangeFolder = () => {
           removeToast(id);
           setUnclassified((prev) => [...prev, f]);
         };
 
-        newToasts.push({ id, fileName: f.name, folder: expanded, confidence: f.result.confidence, onConfirm, onChangeFolder, onSkip });
+        newToasts.push({
+          id,
+          fileName: f.name,
+          folder: expanded,
+          confidence: f.result.confidence,
+          reason: f.result.reason,
+          alternatives: expandedAlts.length > 0 ? expandedAlts : undefined,
+          onConfirm,
+          onPickAlternative,
+          onChangeFolder,
+          onSkip,
+        });
       }
       if (newToasts.length > 0) setToasts((prev) => [...prev, ...newToasts]);
 
-      // Unknown → unclassified panel
       if (unknownFiles.length > 0) {
         setUnclassified((prev) => [...prev, ...unknownFiles]);
         setGeckoFor('confused', 3000);
       }
     },
-    [autoMove, classifyFiles, getDirFiles, expandPath, setGeckoFor, showStatus, doMove, removeToast],
+    [autoMove, classifyFiles, getDirFiles, expandPath, setGeckoFor, showStatus, doMove, removeToast, mode],
   );
 
   const { dropState } = useDropZone(handleFilesDropped);
@@ -217,6 +260,9 @@ function App() {
         <motion.p className="drop-hint" animate={{ opacity: dropState === 'hover' ? 0 : 1 }}>
           {geckoLabel}
         </motion.p>
+
+        {/* 모드 선택기 */}
+        <ModeSelector mode={mode} onChange={handleModeChange} />
 
         <div className="gecko-container">
           <Gecko state={geckoState} />

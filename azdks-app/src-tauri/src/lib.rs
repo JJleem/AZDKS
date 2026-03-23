@@ -2,7 +2,67 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::fs;
 use std::path::{Path, PathBuf};
+use std::time::{SystemTime, UNIX_EPOCH};
 use tauri::Manager;
+
+fn system_time_to_iso(t: SystemTime) -> Option<String> {
+    let secs = t.duration_since(UNIX_EPOCH).ok()?.as_secs();
+    Some(format_unix_timestamp(secs))
+}
+
+fn format_unix_timestamp(secs: u64) -> String {
+    let days = secs / 86400;
+    let time_secs = secs % 86400;
+    let hours = time_secs / 3600;
+    let mins = (time_secs % 3600) / 60;
+    let secs_rem = time_secs % 60;
+    let (year, month, day) = days_to_ymd(days);
+    format!(
+        "{:04}-{:02}-{:02}T{:02}:{:02}:{:02}Z",
+        year, month, day, hours, mins, secs_rem
+    )
+}
+
+fn days_to_ymd(days: u64) -> (u64, u64, u64) {
+    let mut d = days;
+    let mut year = 1970u64;
+    loop {
+        let days_in_year = if is_leap(year) { 366 } else { 365 };
+        if d < days_in_year {
+            break;
+        }
+        d -= days_in_year;
+        year += 1;
+    }
+    let leap = is_leap(year);
+    let month_days: [u64; 12] = [
+        31,
+        if leap { 29 } else { 28 },
+        31,
+        30,
+        31,
+        30,
+        31,
+        31,
+        30,
+        31,
+        30,
+        31,
+    ];
+    let mut month = 0u64;
+    for (i, &md) in month_days.iter().enumerate() {
+        if d < md {
+            month = i as u64 + 1;
+            break;
+        }
+        d -= md;
+    }
+    (year, month, d + 1)
+}
+
+fn is_leap(year: u64) -> bool {
+    (year % 4 == 0 && year % 100 != 0) || year % 400 == 0
+}
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct FileMetadata {
@@ -17,6 +77,8 @@ pub struct FileMetadata {
 
 #[tauri::command]
 async fn move_file(src: String, dest: String) -> Result<(), String> {
+    let src = expand_tilde(&src);
+    let dest = expand_tilde(&dest);
     let src_path = Path::new(&src);
     let dest_path = Path::new(&dest);
 
@@ -85,8 +147,8 @@ async fn read_file_metadata(path: String) -> Result<FileMetadata, String> {
         size: meta.len(),
         path: path.clone(),
         is_dir: meta.is_dir(),
-        created_at: None,
-        modified_at: None,
+        created_at: meta.created().ok().and_then(system_time_to_iso),
+        modified_at: meta.modified().ok().and_then(system_time_to_iso),
     })
 }
 
@@ -137,11 +199,12 @@ async fn load_rules(app: tauri::AppHandle) -> Result<Value, String> {
             "version": 1,
             "rules": [],
             "defaultFolders": {
-                "이미지": "~/Pictures/AZDKS/이미지",
-                "문서": "~/Documents/AZDKS/문서",
-                "코드": "~/Documents/AZDKS/코드",
-                "영상": "~/Movies/AZDKS/영상",
-                "음악": "~/Music/AZDKS/음악",
+                "홈": "~/Downloads/AZDKS",
+                "이미지": "~/Downloads/AZDKS/이미지",
+                "문서": "~/Downloads/AZDKS/문서",
+                "코드": "~/Downloads/AZDKS/코드",
+                "영상": "~/Downloads/AZDKS/영상",
+                "음악": "~/Downloads/AZDKS/음악",
                 "압축": "~/Downloads/AZDKS/압축",
                 "미분류": "~/Downloads/AZDKS/미분류"
             }
