@@ -348,6 +348,64 @@ function App() {
     if (paths.length > 0) handleFilesDropped(paths);
   }, [isProcessing, handleFilesDropped]);
 
+  // 추가 키보드 단축키: Cmd+O, Escape, Cmd+1~4
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      // Cmd+O — 파일 선택 다이얼로그
+      if ((e.metaKey || e.ctrlKey) && e.key === 'o') {
+        e.preventDefault();
+        handleGeckoClick();
+        return;
+      }
+      // Escape — 열린 패널 닫기
+      if (e.key === 'Escape') {
+        setShowHistory(false);
+        setShowSettings(false);
+        setShowExplorer(false);
+        setShowStats(false);
+        return;
+      }
+      // Cmd+1 — 통계 토글
+      if ((e.metaKey || e.ctrlKey) && e.key === '1') {
+        e.preventDefault();
+        setShowStats(v => !v);
+        setShowHistory(false);
+        setShowSettings(false);
+        setShowExplorer(false);
+        return;
+      }
+      // Cmd+2 — 내역 토글
+      if ((e.metaKey || e.ctrlKey) && e.key === '2') {
+        e.preventDefault();
+        setShowHistory(v => !v);
+        setShowSettings(false);
+        setShowExplorer(false);
+        setShowStats(false);
+        return;
+      }
+      // Cmd+3 — 설정 토글
+      if ((e.metaKey || e.ctrlKey) && e.key === '3') {
+        e.preventDefault();
+        setShowSettings(v => !v);
+        setShowHistory(false);
+        setShowExplorer(false);
+        setShowStats(false);
+        return;
+      }
+      // Cmd+4 — 탐색기 토글
+      if ((e.metaKey || e.ctrlKey) && e.key === '4') {
+        e.preventDefault();
+        setShowExplorer(v => !v);
+        setShowHistory(false);
+        setShowSettings(false);
+        setShowStats(false);
+        return;
+      }
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [handleGeckoClick]);
+
   const { dropState } = useDropZone(handleFilesDropped);
 
   useEffect(() => {
@@ -420,10 +478,10 @@ function App() {
               />
             )}
           </AnimatePresence>
-          <button className="icon-btn" onClick={() => { setShowStats(v => !v); setShowHistory(false); setShowSettings(false); setShowExplorer(false); }} title="통계">📊</button>
-          <button className="icon-btn" onClick={() => { setShowHistory(true); setShowSettings(false); setShowExplorer(false); setShowStats(false); }} title="정리 내역">📋</button>
-          <button className="icon-btn" onClick={() => { setShowSettings(true); setShowHistory(false); setShowExplorer(false); setShowStats(false); }} title="설정">⚙️</button>
-          <button className="icon-btn" onClick={() => { setShowExplorer(v => !v); setShowHistory(false); setShowSettings(false); setShowStats(false); }} title="파일 탐색기">📁</button>
+          <button className="icon-btn" onClick={() => { setShowStats(v => !v); setShowHistory(false); setShowSettings(false); setShowExplorer(false); }} title="통계 (⌘1)">📊</button>
+          <button className="icon-btn" onClick={() => { setShowHistory(true); setShowSettings(false); setShowExplorer(false); setShowStats(false); }} title="정리 내역 (⌘2)">📋</button>
+          <button className="icon-btn" onClick={() => { setShowSettings(true); setShowHistory(false); setShowExplorer(false); setShowStats(false); }} title="설정 (⌘3)">⚙️</button>
+          <button className="icon-btn" onClick={() => { setShowExplorer(v => !v); setShowHistory(false); setShowSettings(false); setShowStats(false); }} title="파일 탐색기 (⌘4)">📁</button>
         </div>
       </div>
 
@@ -563,6 +621,44 @@ function App() {
       </AnimatePresence>
 
       {/* 플로팅 되돌리기 버튼 */}
+      {/* 단축키 힌트 바 */}
+      <div style={{
+        position: 'fixed',
+        bottom: 0, left: 0, right: 0,
+        height: 28,
+        background: 'rgba(0,0,0,0.4)',
+        backdropFilter: 'blur(8px)',
+        borderTop: '1px solid rgba(255,255,255,0.05)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 20,
+        zIndex: 10,
+      }}>
+        {[
+          ['⌘O', '파일 열기'],
+          ['⌘Z', '되돌리기'],
+          ['⌘1', '통계'],
+          ['⌘2', '내역'],
+          ['⌘3', '설정'],
+          ['⌘4', '탐색기'],
+          ['ESC', '닫기'],
+        ].map(([key, label]) => (
+          <span key={key} style={{ fontSize: 10, color: 'rgba(255,255,255,0.2)', display: 'flex', gap: 4, alignItems: 'center' }}>
+            <kbd style={{
+              background: 'rgba(255,255,255,0.07)',
+              border: '1px solid rgba(255,255,255,0.12)',
+              borderRadius: 4,
+              padding: '1px 5px',
+              fontSize: 9,
+              fontFamily: 'inherit',
+              color: 'rgba(255,255,255,0.35)',
+            }}>{key}</kbd>
+            <span>{label}</span>
+          </span>
+        ))}
+      </div>
+
       <AnimatePresence>
         {lastUndo && (
           <motion.button
@@ -573,7 +669,7 @@ function App() {
             onClick={handleUndo}
             style={{
               position: 'fixed',
-              bottom: 80,
+              bottom: 100,
               left: 20,
               background: 'rgba(30, 20, 60, 0.92)',
               backdropFilter: 'blur(16px)',
