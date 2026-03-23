@@ -317,7 +317,7 @@ function App() {
           });
         }
 
-        if (newToasts.length > 0) setToasts((prev) => [...prev, ...newToasts]);
+        if (newToasts.length > 0) setToasts(newToasts);
 
         // 미분류
         if (unknownFiles.length > 0) {
