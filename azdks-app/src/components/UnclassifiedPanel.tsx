@@ -16,15 +16,21 @@ export function UnclassifiedPanel({ files, onAssign, onSkipAll }: UnclassifiedPa
 
   return (
     <AnimatePresence>
+      <div style={{
+        position: 'fixed',
+        bottom: 90,
+        left: 0,
+        right: 0,
+        display: 'flex',
+        justifyContent: 'center',
+        zIndex: 900,
+        pointerEvents: 'none',
+      }}>
       <motion.div
         initial={{ opacity: 0, y: 30 }}
         animate={{ opacity: 1, y: 0 }}
         exit={{ opacity: 0, y: 30 }}
         style={{
-          position: 'fixed',
-          bottom: 90,
-          left: '50%',
-          transform: 'translateX(-50%)',
           width: 420,
           maxWidth: '92vw',
           background: 'rgba(13, 10, 30, 0.95)',
@@ -33,7 +39,7 @@ export function UnclassifiedPanel({ files, onAssign, onSkipAll }: UnclassifiedPa
           boxShadow: '0 8px 40px rgba(0,0,0,0.5), 0 0 0 1px rgba(245,158,11,0.25)',
           border: '1px solid rgba(245,158,11,0.35)',
           padding: '14px 16px',
-          zIndex: 900,
+          pointerEvents: 'auto',
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
@@ -121,6 +127,7 @@ export function UnclassifiedPanel({ files, onAssign, onSkipAll }: UnclassifiedPa
           ))}
         </div>
       </motion.div>
+      </div>
     </AnimatePresence>
   );
 }
