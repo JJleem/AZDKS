@@ -24,6 +24,29 @@ export interface FileAnalysis {
   screenCaptureType: string | null;
   // 콘텐츠
   contentType: string | null;
+  // 음악
+  durationSeconds: number | null;
+  audioBitRate: number | null;
+  musicalGenre: string | null;
+  album: string | null;
+  artist: string | null;
+  // 문서
+  numberOfPages: number | null;
+  languages: string[];
+  // 영상
+  videoFrameRate: number | null;
+  // 이미지
+  colorSpace: string | null;
+  // 다운로드 출처 (kMDItemWhereFroms)
+  whereFroms: string[];
+  // Spotlight 파일 크기
+  fileSize: number | null;
+  // 오디오 비트레이트 (bps)
+  audioBitrate: number | null;
+  // 영상 프레임레이트
+  videoFramerate: number | null;
+  // 페이지 수
+  pageCount: number | null;
 }
 
 export async function analyzeFile(path: string): Promise<FileAnalysis> {
@@ -48,6 +71,20 @@ export async function analyzeFile(path: string): Promise<FileAnalysis> {
     isScreenCapture:    Boolean(raw.is_screen_capture ?? false),
     screenCaptureType:  (raw.screen_capture_type as string) ?? null,
     contentType:        (raw.content_type as string) ?? null,
+    durationSeconds:    (raw.duration_seconds as number) ?? null,
+    audioBitRate:       (raw.audio_bit_rate as number) ?? null,
+    musicalGenre:       (raw.musical_genre as string) ?? null,
+    album:              (raw.album as string) ?? null,
+    artist:             (raw.artist as string) ?? null,
+    numberOfPages:      (raw.number_of_pages as number) ?? null,
+    languages:          Array.isArray(raw.languages) ? (raw.languages as string[]) : [],
+    videoFrameRate:     (raw.video_frame_rate as number) ?? null,
+    colorSpace:         (raw.color_space as string) ?? null,
+    whereFroms:         Array.isArray(raw.where_froms) ? (raw.where_froms as string[]) : [],
+    fileSize:           (raw.file_size as number) ?? null,
+    audioBitrate:       (raw.audio_bitrate as number) ?? null,
+    videoFramerate:     (raw.video_framerate as number) ?? null,
+    pageCount:          (raw.page_count as number) ?? null,
   };
 }
 

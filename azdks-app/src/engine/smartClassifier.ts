@@ -5,6 +5,55 @@ import { matchGlob } from './patternMatcher';
 import type { ClassificationResult, ClassificationSource, ClassificationAlternative } from './classifier';
 import { getConfidenceLevel } from './confidenceCalc';
 
+// ── Priority 4.5: kMDItemWhereFroms URL origin map ──
+const WHERE_FROMS_MAP: Array<{ domains: string[]; folder: string; label: string; conf: number }> = [
+  // SNS
+  { domains: ['instagram.com'], folder: 'SNS/인스타그램', label: 'Instagram 다운로드', conf: 0.95 },
+  { domains: ['twitter.com', 'x.com', 't.co'], folder: 'SNS/트위터', label: 'Twitter/X 다운로드', conf: 0.95 },
+  { domains: ['youtube.com', 'youtu.be'], folder: 'SNS/유튜브', label: 'YouTube 다운로드', conf: 0.93 },
+  { domains: ['tiktok.com'], folder: 'SNS/TikTok', label: 'TikTok 다운로드', conf: 0.95 },
+  { domains: ['pinterest.com'], folder: 'SNS/Pinterest', label: 'Pinterest 다운로드', conf: 0.93 },
+  { domains: ['facebook.com', 'fbcdn.net'], folder: 'SNS/Facebook', label: 'Facebook 다운로드', conf: 0.93 },
+  { domains: ['reddit.com', 'redd.it', 'i.redd.it', 'v.redd.it'], folder: 'SNS/Reddit', label: 'Reddit 다운로드', conf: 0.93 },
+  { domains: ['threads.net'], folder: 'SNS/Threads', label: 'Threads 다운로드', conf: 0.93 },
+  { domains: ['discord.com', 'discordapp.com', 'cdn.discordapp.com'], folder: 'SNS/Discord', label: 'Discord 다운로드', conf: 0.92 },
+  { domains: ['line.me', 'obs.line-cdn.net'], folder: 'SNS/LINE', label: 'LINE 다운로드', conf: 0.95 },
+  { domains: ['web.telegram.org', 't.me'], folder: 'SNS/텔레그램', label: 'Telegram 다운로드', conf: 0.95 },
+  // 디자인 도구
+  { domains: ['figma.com'], folder: '디자인/Figma', label: 'Figma 다운로드', conf: 0.97 },
+  { domains: ['dribbble.com'], folder: '디자인/레퍼런스', label: 'Dribbble 레퍼런스', conf: 0.93 },
+  { domains: ['behance.net'], folder: '디자인/레퍼런스', label: 'Behance 레퍼런스', conf: 0.93 },
+  { domains: ['unsplash.com'], folder: '사진/스톡', label: 'Unsplash 스톡 사진', conf: 0.95 },
+  { domains: ['pexels.com'], folder: '사진/스톡', label: 'Pexels 스톡 사진', conf: 0.95 },
+  { domains: ['freepik.com'], folder: '디자인/에셋', label: 'Freepik 에셋', conf: 0.93 },
+  { domains: ['flaticon.com'], folder: '디자인/아이콘', label: 'Flaticon 아이콘', conf: 0.95 },
+  // 개발
+  { domains: ['github.com', 'githubusercontent.com', 'codeload.github.com'], folder: '개발/GitHub', label: 'GitHub 다운로드', conf: 0.95 },
+  { domains: ['npmjs.com'], folder: '개발/패키지', label: 'npm 패키지', conf: 0.93 },
+  { domains: ['stackoverflow.com'], folder: '개발/참고자료', label: 'StackOverflow', conf: 0.90 },
+  // 클라우드/업무
+  { domains: ['drive.google.com', 'docs.google.com'], folder: '문서/Google Drive', label: 'Google Drive', conf: 0.92 },
+  { domains: ['dropbox.com'], folder: '클라우드/Dropbox', label: 'Dropbox', conf: 0.90 },
+  { domains: ['notion.so', 'notion.com'], folder: '문서/Notion', label: 'Notion 내보내기', conf: 0.93 },
+  { domains: ['wetransfer.com'], folder: '공유파일', label: 'WeTransfer', conf: 0.88 },
+  { domains: ['icloud.com', 'apple.com'], folder: '클라우드/iCloud', label: 'iCloud', conf: 0.88 },
+  // 쇼핑/금융
+  { domains: ['coupang.com'], folder: '쇼핑/쿠팡', label: '쿠팡 영수증', conf: 0.93 },
+  { domains: ['baemin.com', 'baemincorp.com'], folder: '쇼핑/배민', label: '배달의민족', conf: 0.93 },
+  { domains: ['amazon.com', 'amazon.co.kr'], folder: '쇼핑/아마존', label: 'Amazon', conf: 0.93 },
+  { domains: ['naver.com', 'smartstore.naver.com'], folder: '쇼핑/네이버', label: '네이버 스마트스토어', conf: 0.88 },
+];
+
+function extractDomain(url: string): string {
+  try {
+    return new URL(url).hostname.replace(/^www\./, '');
+  } catch {
+    // fallback for malformed URLs
+    const match = url.match(/(?:https?:\/\/)?(?:www\.)?([^/]+)/);
+    return match ? match[1] : url;
+  }
+}
+
 // 알려진 제작 앱 → 분류 폴더 매핑
 const CREATOR_MAP: Array<{ patterns: string[]; folder: string; label: string }> = [
   { patterns: ['figma'],                          folder: '디자인/Figma',       label: 'Figma 익스포트' },
@@ -137,6 +186,36 @@ export function classifyWithAnalysis(
     }
   }
 
+  // ── 4.5순위: kMDItemWhereFroms — 다운로드 URL 기반 분류 (confidence 88-97%) ──
+  if (analysis.whereFroms && analysis.whereFroms.length > 0) {
+    let whereFromsMatched = false;
+    outer: for (const url of analysis.whereFroms) {
+      const domain = extractDomain(url);
+      for (const entry of WHERE_FROMS_MAP) {
+        if (entry.domains.some(d => domain === d || domain.endsWith('.' + d))) {
+          options.push({
+            folder: `${home}/${entry.folder}`,
+            confidence: entry.conf,
+            reason: `${entry.label} (출처: ${domain})`,
+            source: 'keyword',
+          });
+          whereFromsMatched = true;
+          break outer;
+        }
+      }
+    }
+    // If no known domain matched but we have whereFroms, note it's a web download
+    if (!whereFromsMatched) {
+      const firstDomain = extractDomain(analysis.whereFroms[0]);
+      options.push({
+        folder: `${home}/다운로드`,
+        confidence: 0.72,
+        reason: `웹 다운로드 (출처: ${firstDomain})`,
+        source: 'keyword',
+      });
+    }
+  }
+
   // ── 5순위: 파일명 키워드 분석 ──
   const keyword = analyzeKeywords(fileName);
   if (keyword) {
@@ -146,6 +225,137 @@ export function classifyWithAnalysis(
       reason: `파일명 "${keyword.matched}" 감지`,
       source: 'keyword',
     });
+  }
+
+  // ── 5.5순위: 영상 메타데이터 인텔리전스 ──
+  if (analysis.durationSeconds !== null && analysis.durationSeconds !== undefined) {
+    const dur = analysis.durationSeconds;
+    const videoExts = ['mp4', 'mov', 'webm', 'mkv', 'avi'];
+    const isVideoExt = videoExts.includes(ext);
+
+    if (analysis.videoFramerate !== null && analysis.videoFramerate !== undefined) {
+      const fps = analysis.videoFramerate;
+      if (fps >= 100) {
+        options.push({
+          folder: `${home}/영상/슬로우모션`,
+          confidence: 0.85,
+          reason: `초고프레임 영상 (${fps.toFixed(0)}fps) — 슬로우모션`,
+          source: 'keyword',
+        });
+      } else if (fps >= 60) {
+        options.push({
+          folder: `${home}/영상/고프레임`,
+          confidence: 0.80,
+          reason: `고프레임 영상 (${fps.toFixed(0)}fps) — 게임/슬로우모션`,
+          source: 'keyword',
+        });
+      }
+    }
+
+    if (isVideoExt) {
+      if (dur < 90) {
+        options.push({
+          folder: `${home}/영상/숏폼`,
+          confidence: 0.82,
+          reason: `짧은 영상 (${dur.toFixed(0)}초) — 숏폼`,
+          source: 'keyword',
+        });
+      } else if (dur > 1800 && ['mp4', 'mov', 'mkv'].includes(ext)) {
+        options.push({
+          folder: `${home}/영상/장편`,
+          confidence: 0.78,
+          reason: `장편 영상 (${(dur / 60).toFixed(0)}분)`,
+          source: 'keyword',
+        });
+      }
+    }
+  }
+
+  // ── 5.6순위: PDF 인텔리전스 ──
+  if (ext === 'pdf') {
+    const pages = analysis.pageCount ?? analysis.numberOfPages;
+    if (pages !== null && pages !== undefined) {
+      if (pages === 1) {
+        options.push({
+          folder: `${home}/문서/영수증`,
+          confidence: 0.70,
+          reason: `1페이지 PDF — 영수증 가능성`,
+          source: 'keyword',
+        });
+      } else if (pages >= 100) {
+        options.push({
+          folder: `${home}/학업/교재`,
+          confidence: 0.75,
+          reason: `PDF ${pages}페이지 — 교재/장문서`,
+          source: 'keyword',
+        });
+      }
+    }
+  }
+
+  // ── 5.7순위: 음악 메타데이터 ──
+  if (analysis.artist || analysis.album) {
+    const detail = [analysis.artist, analysis.album].filter(Boolean).join(' / ');
+    options.push({
+      folder: `${home}/음악/음원`,
+      confidence: 0.88,
+      reason: `음악 메타데이터 (${detail})`,
+      source: 'keyword',
+    });
+  }
+  if (analysis.audioBitrate !== null && analysis.audioBitrate !== undefined && analysis.audioBitrate > 900000) {
+    options.push({
+      folder: `${home}/음악/무손실`,
+      confidence: 0.82,
+      reason: `고비트레이트 오디오 (${(analysis.audioBitrate / 1000).toFixed(0)}kbps) — 무손실`,
+      source: 'keyword',
+    });
+  }
+
+  // ── 5.8순위: 언어 감지 ──
+  if (analysis.languages && analysis.languages.length > 0) {
+    if (analysis.languages.includes('ja')) {
+      options.push({
+        folder: `${home}/문서/일본어`,
+        confidence: 0.68,
+        reason: `일본어 문서 (언어 메타데이터)`,
+        source: 'keyword',
+      });
+    } else if (analysis.languages.includes('ko')) {
+      // 한국어 문서 — 기존 분류에 boost만 적용 (별도 폴더 없이 신뢰도 소폭 향상)
+      // 이미 다른 옵션이 쌓이므로 특별 처리 없음
+    }
+    // 영어 전용은 일반 문서 버킷으로 충분
+  }
+
+  // ── 5.9순위: 파일 크기 인텔리전스 (Spotlight fileSize 우선, fallback: size) ──
+  const effectiveSize = analysis.fileSize ?? analysis.size;
+  if (effectiveSize !== null && effectiveSize !== undefined) {
+    const MB = 1024 * 1024;
+    const rawExts = ['arw', 'cr2', 'cr3', 'nef', 'orf', 'rw2', 'dng', 'raf'];
+    const videoExts2 = ['mp4', 'mov', 'mkv', 'avi', 'webm'];
+    if (rawExts.includes(ext) && effectiveSize > 15 * MB) {
+      options.push({
+        folder: `${home}/사진/RAW`,
+        confidence: 0.88,
+        reason: `RAW 사진 (${(effectiveSize / MB).toFixed(0)}MB)`,
+        source: 'keyword',
+      });
+    } else if (videoExts2.includes(ext) && effectiveSize > 2 * 1024 * MB) {
+      options.push({
+        folder: `${home}/영상/원본`,
+        confidence: 0.85,
+        reason: `대용량 영상 (${(effectiveSize / MB / 1024).toFixed(1)}GB) — 원본`,
+        source: 'keyword',
+      });
+    } else if (videoExts2.includes(ext) && effectiveSize < 3 * MB) {
+      options.push({
+        folder: `${home}/영상/숏폼`,
+        confidence: 0.75,
+        reason: `소용량 영상 (${(effectiveSize / MB).toFixed(1)}MB) — 숏폼`,
+        source: 'keyword',
+      });
+    }
   }
 
   // ── 6순위: 화면 해상도 일치 (스크린샷 가능성) ──

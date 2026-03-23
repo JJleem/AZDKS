@@ -327,6 +327,29 @@ pub struct FileAnalysis {
     pub screen_capture_type: Option<String>,
     // 콘텐츠 타입
     pub content_type: Option<String>,
+    // 음악
+    pub duration_seconds: Option<f64>,
+    pub audio_bit_rate: Option<u64>,
+    pub musical_genre: Option<String>,
+    pub album: Option<String>,
+    pub artist: Option<String>,
+    // 문서
+    pub number_of_pages: Option<i64>,
+    pub languages: Vec<String>,
+    // 영상
+    pub video_frame_rate: Option<f64>,
+    // 이미지
+    pub color_space: Option<String>,
+    // 다운로드 출처 URL
+    pub where_froms: Vec<String>,
+    // 파일 크기 (Spotlight)
+    pub file_size: Option<i64>,
+    // 오디오 비트레이트 (f64 for precision)
+    pub audio_bitrate: Option<f64>,
+    // 영상 프레임레이트
+    pub video_framerate: Option<f64>,
+    // 페이지 수
+    pub page_count: Option<i64>,
 }
 
 #[tauri::command]
@@ -359,6 +382,43 @@ async fn analyze_file(path: String) -> Result<FileAnalysis, String> {
     Ok(analysis)
 }
 
+/// Parse mdls array format:
+/// kMDItemXxx = (
+///     "value1",
+///     "value2"
+/// )
+/// Returns Vec<String> with the unquoted values.
+fn parse_mdls_string_array(raw: &str) -> Vec<String> {
+    let mut results = Vec::new();
+    // The raw value may be a single-line or multi-line parenthesised list.
+    // We extract all double-quoted substrings from within the parentheses.
+    let inner = raw.trim();
+    // Walk through looking for quoted strings
+    let mut chars = inner.chars().peekable();
+    while let Some(c) = chars.next() {
+        if c == '"' {
+            let mut s = String::new();
+            let mut escaped = false;
+            for nc in chars.by_ref() {
+                if escaped {
+                    s.push(nc);
+                    escaped = false;
+                } else if nc == '\\' {
+                    escaped = true;
+                } else if nc == '"' {
+                    break;
+                } else {
+                    s.push(nc);
+                }
+            }
+            if !s.is_empty() {
+                results.push(s);
+            }
+        }
+    }
+    results
+}
+
 #[cfg(target_os = "macos")]
 fn enrich_with_spotlight(analysis: &mut FileAnalysis, path: &str) {
     let output = std::process::Command::new("mdls")
@@ -374,6 +434,17 @@ fn enrich_with_spotlight(analysis: &mut FileAnalysis, path: &str) {
             "-name", "kMDItemScreenCaptureType",
             "-name", "kMDItemLatitude",
             "-name", "kMDItemContentType",
+            "-name", "kMDItemDurationSeconds",
+            "-name", "kMDItemNumberOfPages",
+            "-name", "kMDItemLanguages",
+            "-name", "kMDItemAudioBitRate",
+            "-name", "kMDItemVideoFrameRate",
+            "-name", "kMDItemColorSpace",
+            "-name", "kMDItemFSSize",
+            "-name", "kMDItemAlbum",
+            "-name", "kMDItemMusicalGenre",
+            "-name", "kMDItemArtist",
+            "-name", "kMDItemWhereFroms",
             path,
         ])
         .output();
@@ -388,16 +459,50 @@ fn enrich_with_spotlight(analysis: &mut FileAnalysis, path: &str) {
         Err(_) => return,
     };
 
+    // mdls can output multi-line values for array types.
+    // We accumulate lines so that array values spanning multiple lines are handled.
+    // Strategy: collect the full text and split on known key patterns.
+    // Simple approach: build a map of key -> raw_value by scanning line by line,
+    // and when we detect an opening "(" without a closing ")", collect continuation lines.
+
+    let mut key_values: Vec<(String, String)> = Vec::new();
+    let mut current_key: Option<String> = None;
+    let mut current_val: String = String::new();
+
     for line in text.lines() {
-        let parts: Vec<&str> = line.splitn(2, " = ").collect();
-        if parts.len() != 2 { continue; }
+        if let Some(ref key) = current_key.clone() {
+            // Check if this line closes the parenthesis
+            current_val.push('\n');
+            current_val.push_str(line);
+            if line.trim() == ")" || line.contains(')') {
+                key_values.push((key.clone(), current_val.clone()));
+                current_key = None;
+                current_val = String::new();
+            }
+        } else {
+            let parts: Vec<&str> = line.splitn(2, " = ").collect();
+            if parts.len() != 2 { continue; }
+            let key = parts[0].trim().to_string();
+            let val = parts[1].trim().to_string();
+            if val == "(null)" { continue; }
+            // Check if this is the start of a multi-line array
+            let trimmed_val = val.trim_end();
+            if trimmed_val == "(" || (trimmed_val.starts_with('(') && !trimmed_val.contains(')')) {
+                current_key = Some(key);
+                current_val = val.clone();
+            } else {
+                key_values.push((key, val));
+            }
+        }
+    }
+    // If a multi-line value was never closed, flush it anyway
+    if let Some(key) = current_key {
+        key_values.push((key, current_val));
+    }
 
-        let key = parts[0].trim();
-        let val = parts[1].trim();
-
-        if val == "(null)" { continue; }
-
-        match key {
+    for (key, val) in key_values {
+        let val = val.trim();
+        match key.as_str() {
             "kMDItemPixelWidth"       => { analysis.image_width  = val.parse().ok(); }
             "kMDItemPixelHeight"      => { analysis.image_height = val.parse().ok(); }
             "kMDItemAcquisitionMake"  => { analysis.camera_make  = Some(val.trim_matches('"').to_string()); }
@@ -409,13 +514,39 @@ fn enrich_with_spotlight(analysis: &mut FileAnalysis, path: &str) {
             "kMDItemLatitude"         => { analysis.has_gps = true; }
             "kMDItemContentType"      => { analysis.content_type = Some(val.trim_matches('"').to_string()); }
             "kMDItemAuthors"          => {
-                // Format: ( "Name" ) or ( "Name1", "Name2" )
-                let inner = val.trim_matches(&['(', ')', ' '] as &[char]);
-                let author = inner.split(',').next()
-                    .unwrap_or("").trim().trim_matches('"');
-                if !author.is_empty() {
-                    analysis.doc_author = Some(author.to_string());
+                let parsed = parse_mdls_string_array(val);
+                if let Some(first) = parsed.into_iter().next() {
+                    analysis.doc_author = Some(first);
                 }
+            }
+            "kMDItemDurationSeconds"  => {
+                analysis.duration_seconds = val.parse().ok();
+            }
+            "kMDItemNumberOfPages"    => {
+                let v: Option<i64> = val.parse().ok();
+                analysis.number_of_pages = v;
+                analysis.page_count = v;
+            }
+            "kMDItemAudioBitRate"     => {
+                let v: Option<f64> = val.parse().ok();
+                analysis.audio_bit_rate = v.map(|f| f as u64);
+                analysis.audio_bitrate = v;
+            }
+            "kMDItemVideoFrameRate"   => {
+                let v: Option<f64> = val.parse().ok();
+                analysis.video_frame_rate = v;
+                analysis.video_framerate = v;
+            }
+            "kMDItemColorSpace"       => { analysis.color_space = Some(val.trim_matches('"').to_string()); }
+            "kMDItemAlbum"            => { analysis.album = Some(val.trim_matches('"').to_string()); }
+            "kMDItemMusicalGenre"     => { analysis.musical_genre = Some(val.trim_matches('"').to_string()); }
+            "kMDItemArtist"           => { analysis.artist = Some(val.trim_matches('"').to_string()); }
+            "kMDItemFSSize"           => { analysis.file_size = val.parse().ok(); }
+            "kMDItemLanguages"        => {
+                analysis.languages = parse_mdls_string_array(val);
+            }
+            "kMDItemWhereFroms"       => {
+                analysis.where_froms = parse_mdls_string_array(val);
             }
             _ => {}
         }
