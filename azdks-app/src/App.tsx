@@ -625,39 +625,23 @@ function App() {
       <div style={{
         position: 'fixed',
         bottom: 0, left: 0, right: 0,
-        height: 26,
+        height: 24,
         background: 'rgba(0,0,0,0.5)',
         backdropFilter: 'blur(8px)',
         borderTop: '1px solid rgba(255,255,255,0.05)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        gap: 16,
-        padding: '0 20px',
+        gap: 14,
         zIndex: 10,
         fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+        overflow: 'hidden',
       }}>
         {[
-          ['⌘O', '열기'],
-          ['⌘Z', '되돌리기'],
-          ['⌘1', '통계'],
-          ['⌘2', '내역'],
-          ['⌘3', '설정'],
-          ['⌘4', '탐색기'],
-          ['ESC', '닫기'],
-        ].map(([key, label]) => (
-          <span key={key} style={{ display: 'flex', gap: 5, alignItems: 'center' }}>
-            <span style={{
-              background: 'rgba(255,255,255,0.08)',
-              border: '1px solid rgba(255,255,255,0.13)',
-              borderRadius: 4,
-              padding: '0 5px',
-              fontSize: 10,
-              lineHeight: '16px',
-              color: 'rgba(255,255,255,0.4)',
-              letterSpacing: 0,
-            }}>{key}</span>
-            <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.22)' }}>{label}</span>
+          '⌘O 열기', '⌘Z 되돌리기', '⌘1-4 패널', 'ESC 닫기',
+        ].map((hint) => (
+          <span key={hint} style={{ fontSize: 10, color: 'rgba(255,255,255,0.25)', whiteSpace: 'nowrap' }}>
+            {hint}
           </span>
         ))}
       </div>
