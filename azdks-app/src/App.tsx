@@ -14,7 +14,7 @@ import { useDropZone } from './hooks/useDropZone';
 import { useClassifier, type ProcessedFile } from './hooks/useClassifier';
 
 import { loadRulesStore, getCachedRulesStore, addRule } from './store/rulesStore';
-import { loadHistory, addHistoryEntry, type HistoryEntry } from './store/historyStore';
+import { loadHistory, addHistoryEntry, removeHistoryEntry, type HistoryEntry } from './store/historyStore';
 import { getConfidenceLevel } from './engine/confidenceCalc';
 import { invoke } from '@tauri-apps/api/core';
 import { open as openDialog } from '@tauri-apps/plugin-dialog';
@@ -38,6 +38,11 @@ function App() {
   const { classifyFiles, getDirFiles, expandPath } = useClassifier();
   const geckoTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const statusTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  type UndoEntry = { srcPath: string; destPath: string; fileName: string };
+  const undoStackRef = useRef<UndoEntry[]>([]);
+  const [lastUndo, setLastUndo] = useState<UndoEntry | null>(null);
+  const undoTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     const init = async () => {
@@ -92,10 +97,47 @@ function App() {
       const dest = `${expanded}/${fileName}`;
       await invoke('move_file', { src: srcPath, dest });
       await addHistoryEntry({ fileName, srcPath, destPath: dest, category: folder, confidence });
+      // undo 스택에 추가
+      undoStackRef.current = [
+        { srcPath, destPath: dest, fileName },
+        ...undoStackRef.current,
+      ].slice(0, 10);
+      if (undoTimerRef.current) clearTimeout(undoTimerRef.current);
+      setLastUndo({ srcPath, destPath: dest, fileName });
+      undoTimerRef.current = setTimeout(() => setLastUndo(null), 5000);
       return dest;
     },
     [expandPath],
   );
+
+  const handleUndo = useCallback(async () => {
+    const last = undoStackRef.current[0];
+    if (!last) return;
+    await invoke('move_file', { src: last.destPath, dest: last.srcPath });
+    await removeHistoryEntry(last.fileName, last.destPath);
+    undoStackRef.current = undoStackRef.current.slice(1);
+    const next = undoStackRef.current[0] ?? null;
+    if (undoTimerRef.current) clearTimeout(undoTimerRef.current);
+    setLastUndo(next);
+    if (next) {
+      undoTimerRef.current = setTimeout(() => setLastUndo(null), 5000);
+    }
+    await refreshHistory();
+    setGeckoFor('happy', 1500);
+    showStatus(`↩ "${last.fileName}" 되돌렸어요`);
+  }, [refreshHistory, setGeckoFor, showStatus]);
+
+  // Cmd+Z / Ctrl+Z 키보드 단축키
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'z' && !e.shiftKey) {
+        e.preventDefault();
+        handleUndo();
+      }
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [handleUndo]);
 
   const handleFilesDropped = useCallback(
     async (paths: string[]) => {
@@ -455,6 +497,44 @@ function App() {
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
             onClick={() => { setShowHistory(false); setShowSettings(false); setShowExplorer(false); }}
           />
+        )}
+      </AnimatePresence>
+
+      {/* 플로팅 되돌리기 버튼 */}
+      <AnimatePresence>
+        {lastUndo && (
+          <motion.button
+            initial={{ opacity: 0, y: 20, x: -20 }}
+            animate={{ opacity: 1, y: 0, x: 0 }}
+            exit={{ opacity: 0, y: 20, x: -20 }}
+            transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+            onClick={handleUndo}
+            style={{
+              position: 'fixed',
+              bottom: 80,
+              left: 20,
+              background: 'rgba(30, 20, 60, 0.92)',
+              backdropFilter: 'blur(16px)',
+              border: '1px solid rgba(124, 58, 237, 0.4)',
+              borderRadius: 12,
+              padding: '8px 14px',
+              color: 'rgba(255,255,255,0.85)',
+              fontSize: 13,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 7,
+              boxShadow: '0 4px 20px rgba(0,0,0,0.4)',
+              zIndex: 600,
+              fontFamily: 'inherit',
+            }}
+            onMouseEnter={e => (e.currentTarget.style.borderColor = 'rgba(124,58,237,0.8)')}
+            onMouseLeave={e => (e.currentTarget.style.borderColor = 'rgba(124,58,237,0.4)')}
+          >
+            <span>↩</span>
+            <span>되돌리기</span>
+            <span style={{ fontSize: 10, opacity: 0.45, marginLeft: 2 }}>⌘Z</span>
+          </motion.button>
         )}
       </AnimatePresence>
     </div>

@@ -43,3 +43,11 @@ export async function clearHistory(): Promise<void> {
   _cache = [];
   await invoke('save_history', { history: [] });
 }
+
+export async function removeHistoryEntry(fileName: string, destPath: string): Promise<void> {
+  if (!_cache) await loadHistory();
+  _cache = (_cache ?? []).filter(
+    (e) => !(e.fileName === fileName && e.destPath === destPath)
+  );
+  await invoke('save_history', { history: _cache });
+}
