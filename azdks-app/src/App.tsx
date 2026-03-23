@@ -633,6 +633,7 @@ function App() {
         alignItems: 'center',
         justifyContent: 'center',
         gap: 16,
+        padding: '0 20px',
         zIndex: 10,
         fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
       }}>
