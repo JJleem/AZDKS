@@ -57,7 +57,7 @@ export function ToastNotification({ toasts }: ToastNotificationProps) {
     <div
       style={{
         position: 'fixed',
-        bottom: 24,
+        bottom: 44,
         left: '50%',
         transform: 'translateX(-50%)',
         display: 'flex',

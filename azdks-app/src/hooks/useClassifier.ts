@@ -36,11 +36,12 @@ export function useClassifier() {
 
         // 중복 파일 감지: 목적 폴더에 같은 이름의 파일이 있는지 확인
         try {
-          const destPath = `${processed.result.folder}/${name}`;
+          // expand_path로 ~ 먼저 풀어줘야 exists 체크가 정확함
+          const expandedFolder = await invoke<string>('expand_path', { path: processed.result.folder });
+          const destPath = `${expandedFolder}/${name}`;
           const duplicateExists = await invoke<boolean>('check_file_exists', { path: destPath });
           processed = { ...processed, duplicateExists };
         } catch {
-          // 확인 실패 시 중복 없음으로 처리
           processed = { ...processed, duplicateExists: false };
         }
 
