@@ -625,18 +625,19 @@ function App() {
       <div style={{
         position: 'fixed',
         bottom: 0, left: 0, right: 0,
-        height: 28,
-        background: 'rgba(0,0,0,0.4)',
+        height: 26,
+        background: 'rgba(0,0,0,0.5)',
         backdropFilter: 'blur(8px)',
         borderTop: '1px solid rgba(255,255,255,0.05)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        gap: 20,
+        gap: 16,
         zIndex: 10,
+        fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
       }}>
         {[
-          ['⌘O', '파일 열기'],
+          ['⌘O', '열기'],
           ['⌘Z', '되돌리기'],
           ['⌘1', '통계'],
           ['⌘2', '내역'],
@@ -644,17 +645,18 @@ function App() {
           ['⌘4', '탐색기'],
           ['ESC', '닫기'],
         ].map(([key, label]) => (
-          <span key={key} style={{ fontSize: 10, color: 'rgba(255,255,255,0.2)', display: 'flex', gap: 4, alignItems: 'center' }}>
-            <kbd style={{
-              background: 'rgba(255,255,255,0.07)',
-              border: '1px solid rgba(255,255,255,0.12)',
+          <span key={key} style={{ display: 'flex', gap: 5, alignItems: 'center' }}>
+            <span style={{
+              background: 'rgba(255,255,255,0.08)',
+              border: '1px solid rgba(255,255,255,0.13)',
               borderRadius: 4,
-              padding: '1px 5px',
-              fontSize: 9,
-              fontFamily: 'inherit',
-              color: 'rgba(255,255,255,0.35)',
-            }}>{key}</kbd>
-            <span>{label}</span>
+              padding: '0 5px',
+              fontSize: 10,
+              lineHeight: '16px',
+              color: 'rgba(255,255,255,0.4)',
+              letterSpacing: 0,
+            }}>{key}</span>
+            <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.22)' }}>{label}</span>
           </span>
         ))}
       </div>
