@@ -458,7 +458,7 @@ function App() {
       {/* Top bar */}
       <div className="top-bar">
         <div className="app-title">
-          <span className="app-title-main">알잘딱깔센</span>
+          <span className="app-title-main">알잘딱깔쎈</span>
           <span className="app-title-sub">AZDKS</span>
         </div>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
