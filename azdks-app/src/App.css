@@ -1,0 +1,280 @@
+/* ===== Reset & Base ===== */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+:root {
+  font-family: 'Pretendard', 'Apple SD Gothic Neo', 'Noto Sans KR', Inter, system-ui, sans-serif;
+  font-size: 16px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+html, body, #root {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+/* ===== App Root ===== */
+.app-root {
+  width: 100%;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  overflow: hidden;
+  user-select: none;
+}
+
+/* ===== Background ===== */
+.app-bg {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, #fef9f0 0%, #fde8d5 30%, #f0e6ff 70%, #e0f0ff 100%);
+  z-index: 0;
+}
+
+/* ===== Top Bar ===== */
+.top-bar {
+  position: relative;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 20px 10px;
+  background: rgba(255, 255, 255, 0.6);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.8);
+}
+
+.app-title {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.app-title-main {
+  font-size: 18px;
+  font-weight: 800;
+  color: #2d3748;
+  letter-spacing: -0.5px;
+}
+
+.app-title-sub {
+  font-size: 12px;
+  font-weight: 600;
+  color: #a0aec0;
+  letter-spacing: 2px;
+}
+
+.icon-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  background: rgba(255, 255, 255, 0.8);
+  cursor: pointer;
+  font-size: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+}
+
+.icon-btn:hover {
+  background: rgba(255, 255, 255, 1);
+  transform: translateY(-1px);
+  box-shadow: 0 3px 10px rgba(0,0,0,0.1);
+}
+
+.icon-btn:active {
+  transform: translateY(0);
+}
+
+/* ===== Main Area ===== */
+.main-area {
+  position: relative;
+  z-index: 1;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: 20px;
+}
+
+/* ===== Drop Hint ===== */
+.drop-hint {
+  font-size: 15px;
+  font-weight: 600;
+  color: #718096;
+  text-align: center;
+  letter-spacing: -0.2px;
+}
+
+/* ===== Gecko Container ===== */
+.gecko-container {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 220px;
+  height: 220px;
+}
+
+/* ===== Drop Overlay ===== */
+.drop-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  background: rgba(66, 153, 225, 0.12);
+  border: 3px dashed rgba(66, 153, 225, 0.5);
+  border-radius: 24px;
+  color: #4299e1;
+  font-weight: 700;
+  pointer-events: none;
+}
+
+/* ===== Status Message ===== */
+.status-msg {
+  font-size: 13px;
+  font-weight: 600;
+  color: #4a5568;
+  background: rgba(255, 255, 255, 0.9);
+  padding: 8px 16px;
+  border-radius: 20px;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.1);
+  text-align: center;
+}
+
+/* ===== Recent Strip ===== */
+.recent-strip {
+  position: relative;
+  z-index: 5;
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(8px);
+  border-top: 1px solid rgba(255, 255, 255, 0.9);
+  padding: 10px 16px 12px;
+}
+
+.recent-strip-label {
+  font-size: 10px;
+  font-weight: 700;
+  color: #a0aec0;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  margin-bottom: 6px;
+}
+
+.recent-strip-items {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-height: 100px;
+  overflow-y: auto;
+}
+
+.recent-strip-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+}
+
+.recent-file-name {
+  color: #4a5568;
+  font-weight: 600;
+  max-width: 160px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.recent-arrow {
+  color: #a0aec0;
+  font-size: 10px;
+  flex-shrink: 0;
+}
+
+.recent-folder {
+  color: #4299e1;
+  font-size: 11px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+}
+
+/* ===== Backdrop ===== */
+.backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.2);
+  z-index: 400;
+  backdrop-filter: blur(2px);
+}
+
+/* ===== Toast Buttons ===== */
+.toast-btn {
+  font-size: 12px;
+  font-weight: 600;
+  padding: 6px 14px;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  transition: all 0.15s;
+  font-family: inherit;
+}
+
+.toast-btn-primary {
+  background: #4299e1;
+  color: #fff;
+}
+
+.toast-btn-primary:hover {
+  background: #3182ce;
+}
+
+.toast-btn-secondary {
+  background: #edf2f7;
+  color: #4a5568;
+}
+
+.toast-btn-secondary:hover {
+  background: #e2e8f0;
+}
+
+.toast-btn-ghost {
+  background: none;
+  color: #a0aec0;
+}
+
+.toast-btn-ghost:hover {
+  color: #718096;
+}
+
+/* ===== Scrollbar ===== */
+::-webkit-scrollbar {
+  width: 4px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.15);
+  border-radius: 2px;
+}

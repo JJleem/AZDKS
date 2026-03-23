@@ -1,0 +1,23 @@
+# Dependencies
+node_modules/
+azdks-app/node_modules/
+
+# Build outputs
+azdks-app/dist/
+azdks-app/src-tauri/target/
+
+# Tauri
+azdks-app/src-tauri/gen/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Env
+.env
+.env.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
