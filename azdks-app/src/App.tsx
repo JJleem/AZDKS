@@ -80,15 +80,11 @@ function App() {
     saveMode(newMode);
   }, []);
 
-  // 폴더 열기 (파인더에서)
+  // 폴더 열기 — open -R 로 부모에서 하이라이트해서 보여줌
   const openFolder = useCallback(async (path: string) => {
     try {
       const expanded = path.startsWith('~') ? await expandPath(path) : path;
-      // destPath의 경우 파일명이 포함되어 있으므로 부모 폴더로
-      const folderPath = expanded.includes('.')
-        ? expanded.substring(0, expanded.lastIndexOf('/'))
-        : expanded;
-      await invoke('open_folder', { path: folderPath });
+      await invoke('open_folder', { path: expanded });
     } catch (e) {
       console.error('Failed to open folder:', e);
     }

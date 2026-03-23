@@ -251,14 +251,19 @@ async fn open_folder(path: String) -> Result<(), String> {
 
     #[cfg(target_os = "macos")]
     {
+        // -R: 부모 폴더에서 해당 항목을 하이라이트해서 보여줌
+        // → 상위 폴더 맥락이 바로 보임
         std::process::Command::new("open")
+            .arg("-R")
             .arg(&expanded)
             .spawn()
             .map_err(|e| format!("Failed to open folder: {}", e))?;
     }
     #[cfg(target_os = "windows")]
     {
+        // /select: 해당 항목을 선택해서 탐색기 열기
         std::process::Command::new("explorer")
+            .arg("/select,")
             .arg(&expanded)
             .spawn()
             .map_err(|e| format!("Failed to open folder: {}", e))?;
